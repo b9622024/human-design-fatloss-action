@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.3";
+export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.4";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -30,13 +30,6 @@ const CENTER_FILL:Record<CenterId,string> = {
   Sacral:"#cd6861", Root:"#b98561",
 };
 
-/*
- * CANONICAL-SLOTS 1.3
- * Gate labels are literal boundary slots: every gate coordinate lies on the
- * corresponding center edge. G and Root slot order follows channel partners,
- * so the central 7-31 / 1-8 / 13-33, 2-14 / 5-15 / 29-46 and
- * 3-60 / 9-52 / 42-53 families remain ordered instead of crossing.
- */
 const SHAPES:Record<CenterId,Shape> = {
   Head:{kind:"polygon",points:[{x:450,y:42},{x:408,y:112},{x:492,y:112}]},
   Ajna:{kind:"polygon",points:[{x:408,y:138},{x:492,y:138},{x:450,y:208}]},
@@ -57,44 +50,38 @@ const CENTER_LABEL:Record<CenterId,Point> = {
 
 const GATE:Record<number,Point> = {
   64:{x:424,y:112}, 61:{x:450,y:112}, 63:{x:476,y:112},
-
   47:{x:424,y:138}, 24:{x:450,y:138}, 4:{x:476,y:138},
   17:{x:417,y:153}, 11:{x:483,y:153}, 43:{x:450,y:208},
-
   62:{x:425,y:244}, 23:{x:450,y:244}, 56:{x:475,y:244},
   16:{x:407,y:262}, 20:{x:407,y:303},
   45:{x:493,y:262}, 12:{x:493,y:282}, 35:{x:493,y:303},
   31:{x:425,y:326}, 8:{x:450,y:326}, 33:{x:475,y:326},
-
-  /* G: channel-paired order; all diagonal slots lie exactly on diamond edges. */
-  1:{x:450,y:352},
-  7:{x:423,y:379}, 13:{x:477,y:379},
+  1:{x:450,y:352}, 7:{x:423,y:379}, 13:{x:477,y:379},
   10:{x:408,y:394}, 25:{x:492,y:394},
-  15:{x:435,y:421}, 46:{x:465,y:421},
-  2:{x:450,y:436},
-
+  15:{x:435,y:421}, 46:{x:465,y:421}, 2:{x:450,y:436},
   21:{x:516,y:354}, 51:{x:505,y:394}, 26:{x:507,y:412}, 40:{x:542,y:412},
-
-  /* Spleen slots are distributed on its two diagonal borders. */
   48:{x:337.5,y:483}, 57:{x:356.9,y:493}, 44:{x:378.3,y:504},
   50:{x:374.4,y:518}, 32:{x:337.5,y:537}, 18:{x:298.6,y:557}, 28:{x:259.7,y:577},
-
-  /* Solar Plexus mirrors Spleen on the opposite side. */
   36:{x:562.5,y:483}, 22:{x:543.1,y:493}, 37:{x:521.7,y:504},
   6:{x:525.6,y:518}, 49:{x:562.5,y:537}, 55:{x:601.4,y:557}, 30:{x:640.3,y:577},
-
-  /* Sacral top slots align with G 15 / 2 / 46 channel families. */
   5:{x:426,y:492}, 14:{x:450,y:492}, 29:{x:474,y:492},
   34:{x:408,y:510}, 27:{x:408,y:536}, 59:{x:408,y:562},
   3:{x:426,y:580}, 9:{x:450,y:580}, 42:{x:474,y:580},
-
-  /* Root top aligns directly with Sacral 3 / 9 / 42; side order avoids fan crossings. */
   60:{x:424,y:646}, 52:{x:450,y:646}, 53:{x:476,y:646},
   54:{x:397,y:666}, 58:{x:397,y:689}, 38:{x:397,y:712},
   19:{x:503,y:666}, 39:{x:503,y:689}, 41:{x:503,y:712},
 };
 
 function canonical(a:number,b:number){return `${Math.min(a,b)}-${Math.max(a,b)}`;}
+
+const INTEGRATION_ROUTE:Record<string,Point[]> = {
+  "10-20":[GATE[10],{x:399,y:371},{x:399,y:338},GATE[20]],
+  "20-34":[GATE[20],{x:399,y:338},{x:392,y:430},{x:400,y:482},GATE[34]],
+  "10-34":[GATE[10],{x:399,y:371},{x:392,y:430},{x:400,y:482},GATE[34]],
+  "20-57":[GATE[20],{x:399,y:338},{x:392,y:430},{x:370,y:486},GATE[57]],
+  "34-57":[GATE[34],{x:400,y:482},{x:370,y:486},GATE[57]],
+  "10-57":[GATE[10],{x:399,y:371},{x:392,y:430},{x:370,y:486},GATE[57]],
+};
 
 function gateSource(gate:number,personality:Set<number>,design:Set<number>):GateSource{
   const p=personality.has(gate), d=design.has(gate);
@@ -121,6 +108,26 @@ function GateLabel({gate,source}:{gate:number;source:GateSource}){
 }
 
 function lerp(a:Point,b:Point,t:number):Point{return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}
+function pointsAttr(points:Point[]){return points.map(p=>`${p.x},${p.y}`).join(" ");}
+function midpointIndex(points:Point[]){return Math.max(1,Math.floor(points.length/2));}
+
+function RoutedChannel({points,aSource,bSource,active}:{points:Point[];aSource:GateSource;bSource:GateSource;active:boolean}){
+  const split=midpointIndex(points);
+  const first=points.slice(0,split+1);
+  const second=points.slice(split);
+  if(active){
+    return <g>
+      {aSource!=="inactive"&&<polyline points={pointsAttr(first)} fill="none" stroke={sourceColor(aSource)} strokeWidth="5.4" strokeLinecap="butt" strokeLinejoin="miter"/>}
+      {bSource!=="inactive"&&<polyline points={pointsAttr(second)} fill="none" stroke={sourceColor(bSource)} strokeWidth="5.4" strokeLinecap="butt" strokeLinejoin="miter"/>}
+    </g>;
+  }
+  const aEnd=first.length>1?first.slice(0,2):first;
+  const bEnd=second.length>1?second.slice(-2):second;
+  return <g>
+    {aSource!=="inactive"&&<polyline points={pointsAttr(aEnd)} fill="none" stroke={sourceColor(aSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
+    {bSource!=="inactive"&&<polyline points={pointsAttr(bEnd)} fill="none" stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
+  </g>;
+}
 
 function ChannelActivation({a,b,aSource,bSource,active}:{a:Point;b:Point;aSource:GateSource;bSource:GateSource;active:boolean}){
   if(active){
@@ -133,7 +140,7 @@ function ChannelActivation({a,b,aSource,bSource,active}:{a:Point;b:Point;aSource
   const aEnd=lerp(a,b,.24), bStart=lerp(a,b,.76);
   return <g>
     {aSource!=="inactive"&&<line x1={a.x} y1={a.y} x2={aEnd.x} y2={aEnd.y} stroke={sourceColor(aSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
-    {bSource!=="inactive"&&<line x1={bStart.x} y1={bStart.y} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
+    {bSource!=="inactive"&&<line x1={bStart.x} y1={b.y+(a.y-b.y)*.24} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
   </g>;
 }
 
@@ -159,14 +166,21 @@ export function BodyGraph({chart,personalityActivations=[],designActivations=[],
     <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right"/>
 
     <g>
-      {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);return <g key={`rail-${id}`}>
-        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fbfaf7" strokeWidth="4.8"/>
-        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#807b73" strokeWidth="1.7" opacity="0.9"/>
+      {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);const route=INTEGRATION_ROUTE[id];return <g key={`rail-${id}`}>
+        {route ? <>
+          <polyline points={pointsAttr(route)} fill="none" stroke="#fbfaf7" strokeWidth="4.8" strokeLinejoin="miter"/>
+          <polyline points={pointsAttr(route)} fill="none" stroke="#807b73" strokeWidth="1.7" opacity="0.9" strokeLinejoin="miter"/>
+        </> : <>
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fbfaf7" strokeWidth="4.8"/>
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#807b73" strokeWidth="1.7" opacity="0.9"/>
+        </>}
       </g>;})}
     </g>
 
     <g>
-      {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);return <ChannelActivation key={`act-${id}`} a={a} b={b} aSource={gateSource(c.gateA,personality,design)} bSource={gateSource(c.gateB,personality,design)} active={activeChannels.has(id)}/>;})}
+      {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);const route=INTEGRATION_ROUTE[id];const aSource=gateSource(c.gateA,personality,design),bSource=gateSource(c.gateB,personality,design),active=activeChannels.has(id);return route
+        ? <RoutedChannel key={`act-${id}`} points={route} aSource={aSource} bSource={bSource} active={active}/>
+        : <ChannelActivation key={`act-${id}`} a={a} b={b} aSource={aSource} bSource={bSource} active={active}/>;})}
     </g>
 
     <g>
