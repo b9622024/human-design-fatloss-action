@@ -47,10 +47,10 @@ export default function HumanDesignBodyGraphPage() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V6</div>
+        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V7</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />BodyGraph SVG</h1>
         <p className="lead">
-          V6 重新整理 36 條 Channel 的視覺軌道，改用較平滑的固定 rail routing，並縮短 Hanging Gate 半通道，減少上一版出現的折線感、漂浮線段與左右支線互相干擾。
+          V7 改為 Gate-to-Gate 直接直線連接，不再使用彎曲 rail routing。未啟動 Channel 以較清楚的灰線保留完整拓撲，啟動 Gate 則以黑色／紅色直線覆蓋，讓整體更接近傳統 BodyGraph 的閱讀方式。
         </p>
       </section>
 
@@ -65,16 +65,16 @@ export default function HumanDesignBodyGraphPage() {
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ padding: 14, borderRadius: 12, border: "1px solid #d9d4ca", fontSize: 16 }} />
           </label>
           <button type="submit" disabled={loading} style={{ padding: 15, border: 0, borderRadius: 999, background: "#17172d", color: "white", fontWeight: 700, fontSize: 15 }}>
-            {loading ? "計算中…" : "產生 BodyGraph V6"}
+            {loading ? "計算中…" : "產生 BodyGraph V7"}
           </button>
         </form>
       </section>
 
       {result?.coreChart && (
         <section className="card" style={{ marginTop: 18 }}>
-          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V6</h2>
+          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V7</h2>
           <p style={{ marginTop: -4, opacity: 0.68, lineHeight: 1.6 }}>
-            黑色＝Personality，紅色＝Design。V6 採固定 Gate-to-Gate 軌道與平滑路徑，Hanging Gate 顯示較短，讓主要 Channel topology 更容易閱讀。
+            黑色＝Personality，紅色＝Design。V7 使用直接 Gate-to-Gate 直線連接；完整 Channel 由兩端 Gate 連到中點，Hanging Gate 顯示較長的直線半通道，灰色背景線則清楚保留全部 Channel topology。
           </p>
           <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
             <BodyGraph
