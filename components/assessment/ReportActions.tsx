@@ -7,6 +7,17 @@ type Props = {
   reportElementId: string;
 };
 
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function ReportActions({ reportJson, reportElementId }: Props) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -19,6 +30,18 @@ export function ReportActions({ reportJson, reportElementId }: Props) {
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
       setError("無法自動複製，請改用下方 JSON 文字區手動全選複製。");
+    }
+  }
+
+  function downloadJson() {
+    setError(null);
+    try {
+      triggerDownload(
+        new Blob([reportJson], { type: "application/json;charset=utf-8" }),
+        `human-design-fatloss-report-${new Date().toISOString().slice(0, 10)}.json`,
+      );
+    } catch {
+      setError("JSON 檔案下載失敗，仍可使用一鍵複製 JSON。");
     }
   }
 
@@ -70,15 +93,8 @@ export function ReportActions({ reportJson, reportElementId }: Props) {
       const pngBlob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((result) => result ? resolve(result) : reject(new Error("PNG 產生失敗")), "image/png", 1);
       });
-      const pngUrl = URL.createObjectURL(pngBlob);
-      const link = document.createElement("a");
-      link.href = pngUrl;
-      link.download = `human-design-fatloss-report-${new Date().toISOString().slice(0, 10)}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      triggerDownload(pngBlob, `human-design-fatloss-report-${new Date().toISOString().slice(0, 10)}.png`);
 
-      URL.revokeObjectURL(pngUrl);
       URL.revokeObjectURL(url);
       wrapper.remove();
     } catch (err) {
@@ -88,12 +104,25 @@ export function ReportActions({ reportJson, reportElementId }: Props) {
     }
   }
 
+  const secondaryButton = {
+    padding: 15,
+    borderRadius: 999,
+    border: "1px solid #17172d",
+    background: "#fff",
+    color: "#17172d",
+    fontWeight: 800,
+    fontSize: 15,
+  } as const;
+
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <button type="button" onClick={() => void downloadPng()} disabled={downloading} style={{ padding: 15, borderRadius: 999, border: 0, background: "#17172d", color: "#fff", fontWeight: 800, fontSize: 15 }}>
         {downloading ? "正在產生 PNG…" : "下載 PNG 完整報告"}
       </button>
-      <button type="button" onClick={() => void copyJson()} style={{ padding: 15, borderRadius: 999, border: "1px solid #17172d", background: "#fff", color: "#17172d", fontWeight: 800, fontSize: 15 }}>
+      <button type="button" onClick={downloadJson} style={secondaryButton}>
+        下載 JSON 完整資料
+      </button>
+      <button type="button" onClick={() => void copyJson()} style={secondaryButton}>
         {copied ? "JSON 已複製" : "一鍵複製 JSON"}
       </button>
       {error && <div style={{ padding: 12, borderRadius: 12, background: "#fff0ee", color: "#9f2e25", lineHeight: 1.55 }}>{error}</div>}
