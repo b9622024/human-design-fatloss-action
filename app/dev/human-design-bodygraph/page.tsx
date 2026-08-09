@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { BodyGraph, BODYGRAPH_RENDERER_VERSION } from "@/components/human-design/BodyGraph";
+import { BodyGraph, BODYGRAPH_RENDERER_VERSION } from "@/components/human-design/BodyGraphV2";
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import type { CoreHumanDesignChart } from "@/lib/human-design/topology";
 
@@ -50,7 +50,7 @@ export default function HumanDesignBodyGraphPage() {
         <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW {BODYGRAPH_RENDERER_VERSION}</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />BodyGraph SVG</h1>
         <p className="lead">
-          {BODYGRAPH_RENDERER_VERSION} 目前使用 reference geometry renderer，Gate 與 Channel 直接依照參考圖的相對位置與支線結構輸出。
+          {BODYGRAPH_RENDERER_VERSION} 使用目前較穩定的 canonical-slot renderer。後續只針對支線與右側通道做局部校正，不再整體重排中心與 Gate。
         </p>
       </section>
 
@@ -74,7 +74,7 @@ export default function HumanDesignBodyGraphPage() {
         <section className="card" style={{ marginTop: 18 }}>
           <h2 style={{ marginTop: 0 }}>BodyGraph Preview {BODYGRAPH_RENDERER_VERSION}</h2>
           <p style={{ marginTop: -4, opacity: 0.68, lineHeight: 1.6 }}>
-            黑色＝Personality，紅色＝Design。優先對齊參考圖的 Gate 相對位置、主要 Channel 與支線分支，同時避免線條互相打架。
+            黑色＝Personality，紅色＝Design。此頁先回到目前線條最穩定的基準，再逐段對照參考圖修正支線、右側通道與 Gate 相對位置。
           </p>
           <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
             <BodyGraph
