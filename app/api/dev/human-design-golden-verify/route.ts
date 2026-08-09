@@ -119,25 +119,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const successful = results.filter((item) => item.ok);
-    const failed = results.filter((item) => !item.ok);
-    const matched = successful.filter(
-      (item) => "diff" in item && item.diff.status === "CORE_CHART_MATCH",
-    );
+    const successCount = results.filter((item) => item.ok).length;
+    const errorCount = results.filter((item) => !item.ok).length;
+    const coreChartMatchCount = results.filter(
+      (item) => item.ok && item.diff?.status === "CORE_CHART_MATCH",
+    ).length;
 
     return NextResponse.json({
       status:
-        failed.length === 0 && matched.length === results.length
+        errorCount === 0 && coreChartMatchCount === results.length
           ? "GOLDEN_BATCH_MATCH"
-          : failed.length > 0
+          : errorCount > 0
             ? "GOLDEN_BATCH_HAS_API_ERRORS"
             : "GOLDEN_BATCH_HAS_MISMATCH",
       requestedCount: candidates.length,
       apiAttempts: candidates.length,
-      successCount: successful.length,
-      errorCount: failed.length,
-      coreChartMatchCount: matched.length,
-      allMatch: failed.length === 0 && matched.length === results.length,
+      successCount,
+      errorCount,
+      coreChartMatchCount,
+      allMatch: errorCount === 0 && coreChartMatchCount === results.length,
       results,
       note: "Each candidate is isolated. One HD Hub failure no longer aborts the batch; HTTP status and provider response payload are preserved for diagnosis.",
     });
