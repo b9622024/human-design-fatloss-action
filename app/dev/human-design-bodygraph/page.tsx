@@ -2,10 +2,13 @@
 
 import { FormEvent, useState } from "react";
 import { BodyGraph } from "@/components/human-design/BodyGraph";
+import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import type { CoreHumanDesignChart } from "@/lib/human-design/topology";
 
 type CalculationResult = {
   coreChart?: CoreHumanDesignChart;
+  personalityActivations?: HumanDesignActivation[];
+  designActivations?: HumanDesignActivation[];
   birthTime?: unknown;
   engine?: unknown;
   [key: string]: unknown;
@@ -44,10 +47,10 @@ export default function HumanDesignBodyGraphPage() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW</div>
+        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V2</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />BodyGraph SVG</h1>
         <p className="lead">
-          這一版開始把已驗證的 Channels / Centers / Type / Authority 實際轉成 SVG BodyGraph。先驗證結構與資料綁定，下一版再精修 64 Gates、通道分色與正式報告版面。
+          V2 已加入 Personality / Design 雙側 activation、64 Gate 通道標示、平行通道分流，以及黑／紅／雙色 activation 視覺。這版仍是自建 renderer，不複製任何第三方受保護的圖稿。
         </p>
       </section>
 
@@ -62,16 +65,24 @@ export default function HumanDesignBodyGraphPage() {
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ padding: 14, borderRadius: 12, border: "1px solid #d9d4ca", fontSize: 16 }} />
           </label>
           <button type="submit" disabled={loading} style={{ padding: 15, border: 0, borderRadius: 999, background: "#17172d", color: "white", fontWeight: 700, fontSize: 15 }}>
-            {loading ? "計算中…" : "產生 BodyGraph"}
+            {loading ? "計算中…" : "產生 BodyGraph V2"}
           </button>
         </form>
       </section>
 
       {result?.coreChart && (
         <section className="card" style={{ marginTop: 18 }}>
-          <h2 style={{ marginTop: 0 }}>BodyGraph Preview</h2>
+          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V2</h2>
+          <p style={{ marginTop: -4, opacity: 0.68, lineHeight: 1.6 }}>
+            黑色＝Personality，紅色＝Design，黑紅雙線＝同一 Gate 同時在兩側啟動。灰色為未定義通道。
+          </p>
           <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
-            <BodyGraph chart={result.coreChart} width={600} />
+            <BodyGraph
+              chart={result.coreChart}
+              personalityActivations={result.personalityActivations ?? []}
+              designActivations={result.designActivations ?? []}
+              width={900}
+            />
           </div>
         </section>
       )}
