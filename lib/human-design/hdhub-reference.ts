@@ -12,12 +12,43 @@ export type HumanDesignHubReferenceResult = {
   raw: unknown;
 };
 
+export class HumanDesignHubRequestError extends Error {
+  status: number;
+  payload: unknown;
+  requestDateTime: string;
+
+  constructor(args: {
+    status: number;
+    payload: unknown;
+    requestDateTime: string;
+    message?: string;
+  }) {
+    super(
+      `Human Design Hub request failed (${args.status})${args.message ? `: ${args.message}` : ""}`,
+    );
+    this.name = "HumanDesignHubRequestError";
+    this.status = args.status;
+    this.payload = args.payload;
+    this.requestDateTime = args.requestDateTime;
+  }
+}
+
 function requireApiKey(): string {
   const apiKey = process.env.HDHUB_API_KEY;
   if (!apiKey) {
     throw new Error("HDHUB_API_KEY is not configured on the server");
   }
   return apiKey;
+}
+
+function extractApiMessage(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "";
+  const value = payload as Record<string, unknown>;
+  for (const key of ["message", "detail", "error", "error_description"]) {
+    const candidate = value[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return "";
 }
 
 export async function fetchHumanDesignHubReference(
@@ -45,13 +76,12 @@ export async function fetchHumanDesignHubReference(
   }
 
   if (!response.ok) {
-    const message =
-      payload && typeof payload === "object" && "message" in payload
-        ? String((payload as { message?: unknown }).message ?? "")
-        : "";
-    throw new Error(
-      `Human Design Hub request failed (${response.status})${message ? `: ${message}` : ""}`,
-    );
+    throw new HumanDesignHubRequestError({
+      status: response.status,
+      payload,
+      requestDateTime: offsetDateTime,
+      message: extractApiMessage(payload),
+    });
   }
 
   return {
