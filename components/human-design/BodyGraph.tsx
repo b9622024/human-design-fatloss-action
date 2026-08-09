@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "V15";
+export const BODYGRAPH_RENDERER_VERSION = "REFERENCE-GEOMETRY-1.6";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -30,11 +30,6 @@ const CENTER_FILL: Record<CenterId, string> = {
   Root: "#b6825d",
 };
 
-/*
- * V15 uses boundary-first geometry.
- * Gate coordinates are literal points ON the visible center outline.
- * This keeps both the gate number and its channel attached to the owning center.
- */
 const CENTER_SHAPES: Record<CenterId, Shape> = {
   Head: { kind: "polygon", points: [{ x: 450, y: 44 }, { x: 405, y: 122 }, { x: 495, y: 122 }] },
   Ajna: { kind: "polygon", points: [{ x: 405, y: 154 }, { x: 495, y: 154 }, { x: 450, y: 226 }] },
@@ -48,15 +43,9 @@ const CENTER_SHAPES: Record<CenterId, Shape> = {
 };
 
 const CENTER_LABELS: Record<CenterId, Point> = {
-  Head: { x: 450, y: 86 },
-  Ajna: { x: 450, y: 184 },
-  Throat: { x: 450, y: 302 },
-  G: { x: 450, y: 430 },
-  Ego: { x: 536, y: 444 },
-  Spleen: { x: 247, y: 612 },
-  "Solar Plexus": { x: 653, y: 612 },
-  Sacral: { x: 450, y: 625 },
-  Root: { x: 450, y: 818 },
+  Head: { x: 450, y: 86 }, Ajna: { x: 450, y: 184 }, Throat: { x: 450, y: 302 },
+  G: { x: 450, y: 430 }, Ego: { x: 536, y: 444 }, Spleen: { x: 247, y: 612 },
+  "Solar Plexus": { x: 653, y: 612 }, Sacral: { x: 450, y: 625 }, Root: { x: 450, y: 818 },
 };
 
 const BODY_SYMBOL: Record<string, string> = {
@@ -66,8 +55,12 @@ const BODY_SYMBOL: Record<string, string> = {
 };
 
 /*
- * Exact channel origins on center boundaries.
- * Spleen/Solar gates now follow the two diagonal edges instead of a detached rail.
+ * Gate slots follow the relative placement in the supplied MAIA reference:
+ * G = 1 / 7 13 / 10 25 / 15 46 / 2
+ * Spleen upper edge = 48 57 44 50 (outside -> apex)
+ * Solar upper edge = 6 37 22 36 (apex -> outside)
+ * Sacral = 5 14 29 / 34 27 | 59 / 42 3 9
+ * Root = 53 60 52 / 54 38 58 | 19 39 41
  */
 const GATE_PORTS: Record<number, Point> = {
   64: { x: 421, y: 122 }, 61: { x: 450, y: 122 }, 63: { x: 479, y: 122 },
@@ -79,44 +72,38 @@ const GATE_PORTS: Record<number, Point> = {
   45: { x: 495, y: 278 }, 12: { x: 495, y: 302 }, 35: { x: 495, y: 326 },
   31: { x: 423, y: 346 }, 8: { x: 450, y: 346 }, 33: { x: 477, y: 346 },
 
-  7: { x: 450, y: 382 }, 1: { x: 423, y: 408 }, 13: { x: 477, y: 408 },
+  1: { x: 450, y: 382 },
+  7: { x: 425, y: 406 }, 13: { x: 475, y: 406 },
   10: { x: 400, y: 430 }, 25: { x: 500, y: 430 },
-  2: { x: 423, y: 457 }, 15: { x: 450, y: 480 }, 46: { x: 477, y: 457 },
+  15: { x: 425, y: 456 }, 46: { x: 475, y: 456 },
+  2: { x: 450, y: 480 },
 
   21: { x: 527, y: 427 }, 51: { x: 514, y: 449 }, 26: { x: 520, y: 468 }, 40: { x: 552, y: 468 },
 
-  /* Spleen: distribute gates directly on the triangle perimeter. */
-  48: { x: 318, y: 596 },
-  57: { x: 335, y: 602 },
-  44: { x: 336, y: 614 },
-  50: { x: 318, y: 622 },
-  32: { x: 286, y: 636 },
-  18: { x: 247, y: 653 },
-  28: { x: 207, y: 670 },
+  48: { x: 288, y: 584 },
+  57: { x: 307, y: 591 },
+  44: { x: 326, y: 599 },
+  50: { x: 350, y: 608 },
+  32: { x: 295, y: 632 },
+  18: { x: 253, y: 650 },
+  28: { x: 210, y: 669 },
 
-  /* Solar Plexus mirrors Spleen. */
-  36: { x: 582, y: 596 },
-  22: { x: 565, y: 602 },
-  37: { x: 564, y: 614 },
-  6: { x: 582, y: 622 },
-  49: { x: 614, y: 636 },
-  55: { x: 653, y: 653 },
-  30: { x: 693, y: 670 },
+  6: { x: 550, y: 608 },
+  37: { x: 575, y: 598 },
+  22: { x: 605, y: 587 },
+  36: { x: 644, y: 572 },
+  49: { x: 605, y: 632 },
+  55: { x: 647, y: 650 },
+  30: { x: 690, y: 669 },
 
   5: { x: 426, y: 572 }, 14: { x: 450, y: 572 }, 29: { x: 474, y: 572 },
-  34: { x: 402, y: 594 }, 27: { x: 402, y: 622 }, 59: { x: 402, y: 650 },
-  3: { x: 426, y: 674 }, 9: { x: 450, y: 674 }, 42: { x: 474, y: 674 },
+  34: { x: 402, y: 596 }, 27: { x: 402, y: 626 },
+  59: { x: 498, y: 626 },
+  42: { x: 426, y: 674 }, 3: { x: 450, y: 674 }, 9: { x: 474, y: 674 },
 
-  /* Root: seven gates evenly distributed on the top edge. */
-  54: { x: 382, y: 760 },
-  58: { x: 405, y: 760 },
-  38: { x: 428, y: 760 },
-  60: { x: 450, y: 760 },
-  52: { x: 472, y: 760 },
-  53: { x: 495, y: 760 },
-  19: { x: 518, y: 760 },
-  39: { x: 530, y: 795 },
-  41: { x: 530, y: 838 },
+  53: { x: 426, y: 760 }, 60: { x: 450, y: 760 }, 52: { x: 474, y: 760 },
+  54: { x: 370, y: 782 }, 38: { x: 370, y: 812 }, 58: { x: 370, y: 842 },
+  19: { x: 530, y: 782 }, 39: { x: 530, y: 812 }, 41: { x: 530, y: 842 },
 };
 
 const GATE_CENTER = new Map<number, CenterId>();
@@ -125,24 +112,40 @@ for (const channel of CHANNELS) {
   GATE_CENTER.set(channel.gateB, channel.centerB);
 }
 
-/*
- * Label positions are slightly inset toward the center so every number visibly
- * belongs to the shape while the channel starts exactly at the border point.
- */
 const GATE_LABEL_OVERRIDES: Partial<Record<number, Point>> = {
-  48: { x: 307, y: 594 }, 57: { x: 326, y: 601 }, 44: { x: 326, y: 616 }, 50: { x: 307, y: 624 },
-  36: { x: 593, y: 594 }, 22: { x: 574, y: 601 }, 37: { x: 574, y: 616 }, 6: { x: 593, y: 624 },
-  32: { x: 280, y: 640 }, 18: { x: 243, y: 657 }, 28: { x: 207, y: 671 },
-  49: { x: 620, y: 640 }, 55: { x: 657, y: 657 }, 30: { x: 693, y: 671 },
-  54: { x: 382, y: 773 }, 58: { x: 405, y: 773 }, 38: { x: 428, y: 773 }, 60: { x: 450, y: 773 },
-  52: { x: 472, y: 773 }, 53: { x: 495, y: 773 }, 19: { x: 518, y: 773 },
-  39: { x: 517, y: 798 }, 41: { x: 517, y: 839 },
+  48: { x: 282, y: 581 }, 57: { x: 302, y: 588 }, 44: { x: 321, y: 596 }, 50: { x: 342, y: 611 },
+  32: { x: 289, y: 635 }, 18: { x: 248, y: 653 }, 28: { x: 207, y: 671 },
+  6: { x: 558, y: 611 }, 37: { x: 580, y: 596 }, 22: { x: 610, y: 584 }, 36: { x: 650, y: 569 },
+  49: { x: 611, y: 635 }, 55: { x: 652, y: 653 }, 30: { x: 693, y: 671 },
+  34: { x: 414, y: 596 }, 27: { x: 414, y: 626 }, 59: { x: 486, y: 626 },
+  42: { x: 426, y: 663 }, 3: { x: 450, y: 663 }, 9: { x: 474, y: 663 },
+  53: { x: 426, y: 773 }, 60: { x: 450, y: 773 }, 52: { x: 474, y: 773 },
+  54: { x: 382, y: 782 }, 38: { x: 382, y: 812 }, 58: { x: 382, y: 842 },
+  19: { x: 518, y: 782 }, 39: { x: 518, y: 812 }, 41: { x: 518, y: 842 },
   21: { x: 525, y: 418 }, 51: { x: 511, y: 445 }, 26: { x: 520, y: 478 }, 40: { x: 552, y: 478 },
 };
 
 function canonicalChannelId(a: number, b: number) {
   return `${Math.min(a, b)}-${Math.max(a, b)}`;
 }
+
+/*
+ * Shared integration-circuit rails and right-side lanes.  These are straight
+ * segments with common junctions, matching the reference's branch topology
+ * instead of six unrelated diagonals.
+ */
+const ROUTES: Record<string, Point[]> = {
+  "10-20": [GATE_PORTS[10], { x: 390, y: 430 }, { x: 390, y: 350 }, GATE_PORTS[20]],
+  "20-34": [GATE_PORTS[20], { x: 390, y: 350 }, { x: 390, y: 535 }, GATE_PORTS[34]],
+  "10-34": [GATE_PORTS[10], { x: 390, y: 430 }, { x: 390, y: 535 }, GATE_PORTS[34]],
+  "20-57": [GATE_PORTS[20], { x: 390, y: 350 }, { x: 390, y: 510 }, { x: 350, y: 575 }, GATE_PORTS[57]],
+  "34-57": [GATE_PORTS[34], { x: 390, y: 535 }, { x: 350, y: 575 }, GATE_PORTS[57]],
+  "10-57": [GATE_PORTS[10], { x: 390, y: 430 }, { x: 390, y: 510 }, { x: 350, y: 575 }, GATE_PORTS[57]],
+
+  "12-22": [GATE_PORTS[12], { x: 512, y: 335 }, { x: 540, y: 430 }, { x: 575, y: 535 }, GATE_PORTS[22]],
+  "35-36": [GATE_PORTS[35], { x: 530, y: 350 }, { x: 575, y: 435 }, { x: 625, y: 525 }, GATE_PORTS[36]],
+  "37-40": [GATE_PORTS[40], { x: 565, y: 485 }, { x: 585, y: 550 }, GATE_PORTS[37]],
+};
 
 function sourceForGate(gate: number, personality: Set<number>, design: Set<number>): GateSource {
   const p = personality.has(gate);
@@ -179,6 +182,43 @@ function ColoredLine({ a, b, source }: { a: Point; b: Point; source: GateSource 
   return <g>
     <line x1={a1.x} y1={a1.y} x2={b1.x} y2={b1.y} stroke="#171720" strokeWidth="3.3" strokeLinecap="butt" />
     <line x1={a2.x} y1={a2.y} x2={b2.x} y2={b2.y} stroke="#d94a40" strokeWidth="3.3" strokeLinecap="butt" />
+  </g>;
+}
+
+function sourceColor(source: GateSource) {
+  if (source === "design") return "#d94a40";
+  if (source === "personality") return "#171720";
+  if (source === "both") return "#7c2630";
+  return "#68645e";
+}
+
+function routeFor(gateA: number, gateB: number): Point[] | null {
+  const id = canonicalChannelId(gateA, gateB);
+  const route = ROUTES[id];
+  if (!route) return null;
+  const min = Math.min(gateA, gateB);
+  return gateA === min ? route : [...route].reverse();
+}
+
+function pointsAttr(points: Point[]) {
+  return points.map((p) => `${p.x},${p.y}`).join(" ");
+}
+
+function RoutedActivation({ points, sourceA, sourceB, complete }: { points: Point[]; sourceA: GateSource; sourceB: GateSource; complete: boolean }) {
+  const split = Math.max(1, Math.floor(points.length / 2));
+  const first = points.slice(0, split + 1);
+  const second = points.slice(split);
+  if (complete) {
+    return <g>
+      {sourceA !== "inactive" && <polyline points={pointsAttr(first)} fill="none" stroke={sourceColor(sourceA)} strokeWidth="7.2" strokeLinejoin="miter" strokeLinecap="butt" />}
+      {sourceB !== "inactive" && <polyline points={pointsAttr(second)} fill="none" stroke={sourceColor(sourceB)} strokeWidth="7.2" strokeLinejoin="miter" strokeLinecap="butt" />}
+    </g>;
+  }
+  const stubA = first.slice(0, Math.min(2, first.length));
+  const stubB = second.slice(Math.max(0, second.length - 2));
+  return <g>
+    {sourceA !== "inactive" && <polyline points={pointsAttr(stubA)} fill="none" stroke={sourceColor(sourceA)} strokeWidth="7.2" strokeLinecap="butt" />}
+    {sourceB !== "inactive" && <polyline points={pointsAttr(stubB)} fill="none" stroke={sourceColor(sourceB)} strokeWidth="7.2" strokeLinecap="butt" />}
   </g>;
 }
 
@@ -255,11 +295,20 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
         const complete = activeChannels.has(id);
         const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
         const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
+        const route = routeFor(channel.gateA, channel.gateB);
+
+        if (route) {
+          return <g key={id}>
+            <polyline points={pointsAttr(route)} fill="none" stroke="#b6b1aa" strokeWidth="3.2" strokeLinejoin="miter" strokeLinecap="butt" opacity="0.9" />
+            <RoutedActivation points={route} sourceA={sourceA} sourceB={sourceB} complete={complete} />
+          </g>;
+        }
+
         const mid = midpoint(a, b);
         const stubA = lerp(a, b, 0.34);
         const stubB = lerp(b, a, 0.34);
         return <g key={id}>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#c8c4bd" strokeWidth="3.2" strokeLinecap="butt" opacity="0.78" />
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#b6b1aa" strokeWidth="3.2" strokeLinecap="butt" opacity="0.9" />
           {complete ? <>
             {sourceA !== "inactive" && <ColoredLine a={a} b={mid} source={sourceA} />}
             {sourceB !== "inactive" && <ColoredLine a={b} b={mid} source={sourceB} />}
