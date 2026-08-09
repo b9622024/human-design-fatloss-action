@@ -1,3 +1,5 @@
+import { HumanDesignActivation, activationsToGateLineRecord } from "@/lib/human-design/activations";
+
 export const HDHUB_SIMPLE_BODYGRAPH_URL =
   "https://api.humandesignhub.app/v2/simple-bodygraph";
 
@@ -60,20 +62,90 @@ export async function fetchHumanDesignHubReference(
   };
 }
 
-export function buildPreliminaryReferenceDiff(
-  selfCalculation: Record<string, unknown>,
-  reference: HumanDesignHubReferenceResult,
-) {
+type GateLineMap = Record<string, [number, number]>;
+
+function extractGateAndLine(reference: HumanDesignHubReferenceResult): {
+  personality?: GateLineMap;
+  design?: GateLineMap;
+} {
+  if (!reference.raw || typeof reference.raw !== "object") return {};
+  const raw = reference.raw as Record<string, unknown>;
+  const gateAndLine = raw.gate_and_line;
+  if (!gateAndLine || typeof gateAndLine !== "object") return {};
+  const pair = gateAndLine as Record<string, unknown>;
   return {
-    status: "REFERENCE_CONNECTED_SELF_MAPPING_PENDING",
-    requestDateTimeMatch:
-      (selfCalculation.birthTime as { localDateTime?: string } | undefined)
-        ?.localDateTime === reference.requestDateTime,
-    comparableNow: {
-      timezoneNormalization: true,
-      referenceApiConnectivity: true,
+    personality:
+      pair.personality && typeof pair.personality === "object"
+        ? (pair.personality as GateLineMap)
+        : undefined,
+    design:
+      pair.design && typeof pair.design === "object"
+        ? (pair.design as GateLineMap)
+        : undefined,
+  };
+}
+
+function compareSide(self: HumanDesignActivation[], reference?: GateLineMap) {
+  const selfMap = activationsToGateLineRecord(self);
+  const bodies = Object.keys(selfMap);
+  const rows = bodies.map((body) => {
+    const selfValue = selfMap[body];
+    const referenceValue = reference?.[body] ?? null;
+    const match =
+      referenceValue !== null &&
+      selfValue[0] === referenceValue[0] &&
+      selfValue[1] === referenceValue[1];
+    return {
+      body,
+      self: selfValue,
+      reference: referenceValue,
+      match,
+    };
+  });
+  return {
+    rows,
+    matched: rows.filter((row) => row.match).length,
+    total: rows.length,
+    allMatch: rows.every((row) => row.match),
+  };
+}
+
+export function buildActivationReferenceDiff(args: {
+  personality: HumanDesignActivation[];
+  design: HumanDesignActivation[];
+  reference: HumanDesignHubReferenceResult;
+}) {
+  const referenceGateLines = extractGateAndLine(args.reference);
+  const personality = compareSide(args.personality, referenceGateLines.personality);
+  const design = compareSide(args.design, referenceGateLines.design);
+  const raw =
+    args.reference.raw && typeof args.reference.raw === "object"
+      ? (args.reference.raw as Record<string, unknown>)
+      : {};
+
+  return {
+    status:
+      personality.allMatch && design.allMatch
+        ? "ACTIVATION_LAYER_MATCH"
+        : "ACTIVATION_LAYER_MISMATCH",
+    activationLayer: {
+      personality,
+      design,
+      matched: personality.matched + design.matched,
+      total: personality.total + design.total,
+      allMatch: personality.allMatch && design.allMatch,
     },
-    pendingUntilSelfEngineImplementsMapping: [
+    referenceChartSummary: {
+      type: raw.type ?? null,
+      strategy: raw.strategy ?? null,
+      authority: raw.authority ?? null,
+      profile: raw.profile ?? null,
+      definition: raw.definition ?? null,
+      gates: raw.gates ?? null,
+      channels: raw.channels_short ?? null,
+      centers: raw.centers ?? null,
+    },
+    pendingTopologyComparison: [
       "type",
       "strategy",
       "authority",
@@ -83,7 +155,5 @@ export function buildPreliminaryReferenceDiff(
       "channels",
       "centers",
     ],
-    note:
-      "HD Hub raw response is intentionally preserved. Formal field-by-field diff will be enabled only after the self engine implements Rave Mandala Gate/Line mapping and chart topology rules.",
   };
 }
