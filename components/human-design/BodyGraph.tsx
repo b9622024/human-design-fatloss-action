@@ -29,20 +29,20 @@ const CENTER_FILL: Record<CenterId, string> = {
 };
 
 /*
- * V11: fixed BodyGraph geometry with deliberately separated centers.
- * Every channel is a single straight Gate-to-Gate line. No curves, no
- * waypoint routing and no force-directed layout.
+ * V12: straight gate-to-gate topology with re-spaced gate ports.
+ * Crowded gate clusters are deliberately spread along their owning center edge
+ * so labels stay readable without disconnecting from the actual channel origin.
  */
 const CENTER_SHAPES: Record<CenterId, Shape> = {
   Head: { kind: "polygon", points: [{ x: 450, y: 52 }, { x: 402, y: 138 }, { x: 498, y: 138 }] },
   Ajna: { kind: "polygon", points: [{ x: 402, y: 174 }, { x: 498, y: 174 }, { x: 450, y: 258 }] },
-  Throat: { kind: "rect", x: 397, y: 300, width: 106, height: 96, rx: 6 },
+  Throat: { kind: "rect", x: 395, y: 300, width: 110, height: 96, rx: 6 },
   G: { kind: "polygon", points: [{ x: 450, y: 440 }, { x: 505, y: 492 }, { x: 450, y: 548 }, { x: 395, y: 492 }] },
-  Ego: { kind: "polygon", points: [{ x: 540, y: 448 }, { x: 514, y: 520 }, { x: 566, y: 520 }] },
-  Spleen: { kind: "polygon", points: [{ x: 125, y: 575 }, { x: 318, y: 640 }, { x: 125, y: 720 }] },
-  "Solar Plexus": { kind: "polygon", points: [{ x: 775, y: 575 }, { x: 582, y: 640 }, { x: 775, y: 720 }] },
-  Sacral: { kind: "rect", x: 397, y: 605, width: 106, height: 106, rx: 9 },
-  Root: { kind: "rect", x: 390, y: 775, width: 120, height: 102, rx: 8 },
+  Ego: { kind: "polygon", points: [{ x: 535, y: 452 }, { x: 510, y: 522 }, { x: 560, y: 522 }] },
+  Spleen: { kind: "polygon", points: [{ x: 78, y: 570 }, { x: 300, y: 640 }, { x: 78, y: 724 }] },
+  "Solar Plexus": { kind: "polygon", points: [{ x: 822, y: 570 }, { x: 600, y: 640 }, { x: 822, y: 724 }] },
+  Sacral: { kind: "rect", x: 393, y: 606, width: 114, height: 108, rx: 9 },
+  Root: { kind: "rect", x: 372, y: 776, width: 156, height: 106, rx: 8 },
 };
 
 const CENTER_LABELS: Record<CenterId, Point> = {
@@ -50,11 +50,11 @@ const CENTER_LABELS: Record<CenterId, Point> = {
   Ajna: { x: 450, y: 211 },
   Throat: { x: 450, y: 350 },
   G: { x: 450, y: 498 },
-  Ego: { x: 540, y: 493 },
-  Spleen: { x: 202, y: 650 },
-  "Solar Plexus": { x: 698, y: 650 },
-  Sacral: { x: 450, y: 660 },
-  Root: { x: 450, y: 830 },
+  Ego: { x: 535, y: 494 },
+  Spleen: { x: 180, y: 652 },
+  "Solar Plexus": { x: 720, y: 652 },
+  Sacral: { x: 450, y: 662 },
+  Root: { x: 450, y: 838 },
 };
 
 const BODY_SYMBOL: Record<string, string> = {
@@ -63,35 +63,39 @@ const BODY_SYMBOL: Record<string, string> = {
   Uranus: "♅", Neptune: "♆", Pluto: "♇",
 };
 
+/* Channel origins. These coordinates sit on the visible boundary of each center. */
 const GATE_PORTS: Record<number, Point> = {
   64: { x: 420, y: 138 }, 61: { x: 450, y: 138 }, 63: { x: 480, y: 138 },
   47: { x: 420, y: 174 }, 24: { x: 450, y: 174 }, 4: { x: 480, y: 174 },
-  17: { x: 426, y: 216 }, 43: { x: 450, y: 258 }, 11: { x: 474, y: 216 },
+  17: { x: 420, y: 206 }, 43: { x: 450, y: 258 }, 11: { x: 480, y: 206 },
 
   62: { x: 420, y: 300 }, 23: { x: 450, y: 300 }, 56: { x: 480, y: 300 },
-  16: { x: 397, y: 322 }, 20: { x: 397, y: 362 },
-  45: { x: 503, y: 322 }, 12: { x: 503, y: 350 }, 35: { x: 503, y: 378 },
-  31: { x: 420, y: 396 }, 8: { x: 450, y: 396 }, 33: { x: 480, y: 396 },
+  16: { x: 395, y: 318 }, 20: { x: 395, y: 365 },
+  45: { x: 505, y: 318 }, 12: { x: 505, y: 349 }, 35: { x: 505, y: 380 },
+  31: { x: 418, y: 396 }, 8: { x: 450, y: 396 }, 33: { x: 482, y: 396 },
 
-  7: { x: 450, y: 440 }, 1: { x: 423, y: 466 }, 13: { x: 477, y: 466 },
+  7: { x: 450, y: 440 }, 1: { x: 420, y: 468 }, 13: { x: 480, y: 468 },
   10: { x: 395, y: 492 }, 25: { x: 505, y: 492 },
-  2: { x: 423, y: 520 }, 15: { x: 450, y: 548 }, 46: { x: 477, y: 520 },
+  2: { x: 420, y: 522 }, 15: { x: 450, y: 548 }, 46: { x: 480, y: 522 },
 
-  21: { x: 532, y: 470 }, 51: { x: 520, y: 500 }, 26: { x: 526, y: 520 }, 40: { x: 554, y: 520 },
+  21: { x: 529, y: 469 }, 51: { x: 514, y: 501 }, 26: { x: 518, y: 522 }, 40: { x: 552, y: 522 },
 
-  48: { x: 292, y: 631 }, 57: { x: 307, y: 636 }, 44: { x: 318, y: 640 },
-  50: { x: 306, y: 651 }, 32: { x: 265, y: 669 }, 18: { x: 220, y: 688 }, 28: { x: 165, y: 710 },
+  /* Spleen gates are deliberately distributed along the two sloping edges. */
+  48: { x: 276, y: 632 }, 57: { x: 288, y: 636 }, 44: { x: 300, y: 640 },
+  50: { x: 286, y: 646 }, 32: { x: 246, y: 660 }, 18: { x: 196, y: 679 }, 28: { x: 132, y: 704 },
 
-  36: { x: 608, y: 631 }, 22: { x: 593, y: 636 }, 37: { x: 582, y: 640 },
-  6: { x: 594, y: 651 }, 49: { x: 635, y: 669 }, 55: { x: 680, y: 688 }, 30: { x: 735, y: 710 },
+  /* Solar Plexus mirrors Spleen and uses the same visual spacing. */
+  36: { x: 624, y: 632 }, 22: { x: 612, y: 636 }, 37: { x: 600, y: 640 },
+  6: { x: 614, y: 646 }, 49: { x: 654, y: 660 }, 55: { x: 704, y: 679 }, 30: { x: 768, y: 704 },
 
-  5: { x: 424, y: 605 }, 14: { x: 450, y: 605 }, 29: { x: 476, y: 605 },
-  34: { x: 397, y: 628 }, 27: { x: 397, y: 657 }, 59: { x: 397, y: 688 },
-  3: { x: 424, y: 711 }, 9: { x: 450, y: 711 }, 42: { x: 476, y: 711 },
+  5: { x: 422, y: 606 }, 14: { x: 450, y: 606 }, 29: { x: 478, y: 606 },
+  34: { x: 393, y: 628 }, 27: { x: 393, y: 658 }, 59: { x: 393, y: 690 },
+  3: { x: 422, y: 714 }, 9: { x: 450, y: 714 }, 42: { x: 478, y: 714 },
 
-  54: { x: 398, y: 775 }, 58: { x: 415, y: 775 }, 38: { x: 432, y: 775 },
-  60: { x: 450, y: 775 }, 52: { x: 468, y: 775 }, 53: { x: 485, y: 775 }, 19: { x: 502, y: 775 },
-  39: { x: 510, y: 806 }, 41: { x: 510, y: 846 },
+  /* Root top edge is widened so seven gates have independent readable positions. */
+  54: { x: 382, y: 776 }, 58: { x: 405, y: 776 }, 38: { x: 428, y: 776 },
+  60: { x: 450, y: 776 }, 52: { x: 472, y: 776 }, 53: { x: 495, y: 776 }, 19: { x: 518, y: 776 },
+  39: { x: 528, y: 810 }, 41: { x: 528, y: 852 },
 };
 
 const GATE_CENTER = new Map<number, CenterId>();
@@ -99,6 +103,19 @@ for (const channel of CHANNELS) {
   GATE_CENTER.set(channel.gateA, channel.centerA);
   GATE_CENTER.set(channel.gateB, channel.centerB);
 }
+
+/*
+ * Label points normally use a small inward inset from the port. Crowded clusters
+ * get explicit offsets so the number remains visually attached to its own port
+ * while no two labels overlap.
+ */
+const GATE_LABEL_OVERRIDES: Partial<Record<number, Point>> = {
+  48: { x: 276, y: 622 }, 57: { x: 289, y: 634 }, 44: { x: 306, y: 646 }, 50: { x: 285, y: 657 },
+  36: { x: 624, y: 622 }, 22: { x: 611, y: 634 }, 37: { x: 594, y: 646 }, 6: { x: 615, y: 657 },
+  54: { x: 382, y: 787 }, 58: { x: 405, y: 787 }, 38: { x: 428, y: 787 },
+  60: { x: 450, y: 787 }, 52: { x: 472, y: 787 }, 53: { x: 495, y: 787 }, 19: { x: 518, y: 787 },
+  21: { x: 529, y: 479 }, 51: { x: 516, y: 503 }, 26: { x: 525, y: 513 }, 40: { x: 548, y: 513 },
+};
 
 function canonicalChannelId(a: number, b: number) {
   return `${Math.min(a, b)}-${Math.max(a, b)}`;
@@ -151,6 +168,8 @@ function renderCenter(center: CenterId, defined: boolean) {
 }
 
 function gateLabelPoint(gate: number): Point {
+  const override = GATE_LABEL_OVERRIDES[gate];
+  if (override) return override;
   const port = GATE_PORTS[gate];
   const center = GATE_CENTER.get(gate);
   if (!center) return port;
@@ -158,7 +177,7 @@ function gateLabelPoint(gate: number): Point {
   const dx = target.x - port.x;
   const dy = target.y - port.y;
   const len = Math.hypot(dx, dy) || 1;
-  const inset = 10;
+  const inset = 9;
   return { x: port.x + (dx / len) * inset, y: port.y + (dy / len) * inset };
 }
 
@@ -190,8 +209,8 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
   const personalityGates = new Set(personalityActivations.map((a) => a.gate));
   const designGates = new Set(designActivations.map((a) => a.gate));
 
-  return <svg viewBox="0 0 900 930" width="100%" style={{ maxWidth: width, height: "auto" }} role="img" aria-label="Human Design BodyGraph">
-    <rect x="0" y="0" width="900" height="930" rx="24" fill="#fbfaf7" />
+  return <svg viewBox="0 0 900 940" width="100%" style={{ maxWidth: width, height: "auto" }} role="img" aria-label="Human Design BodyGraph">
+    <rect x="0" y="0" width="900" height="940" rx="24" fill="#fbfaf7" />
     <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left" />
     <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right" />
 
@@ -208,8 +227,8 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
         const stubA = lerp(a, b, 0.34);
         const stubB = lerp(b, a, 0.34);
         return <g key={id}>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#8d8981" strokeWidth="9" strokeLinecap="butt" opacity="0.75" />
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#ffffff" strokeWidth="5.5" strokeLinecap="butt" />
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#8d8981" strokeWidth="8" strokeLinecap="butt" opacity="0.72" />
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#ffffff" strokeWidth="4.8" strokeLinecap="butt" />
           {complete ? <>
             {sourceA !== "inactive" && <ColoredLine a={a} b={mid} source={sourceA} />}
             {sourceB !== "inactive" && <ColoredLine a={b} b={mid} source={sourceB} />}
@@ -233,11 +252,11 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
         const gate = Number(gateString);
         const p = gateLabelPoint(gate);
         const source = sourceForGate(gate, personalityGates, designGates);
-        return <text key={`gate-${gate}`} x={p.x} y={p.y + 3.5} textAnchor="middle" fontSize="10.5" fontWeight="900" fill={gateTextColor(source)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="2.8" strokeLinejoin="round">{gate}</text>;
+        return <text key={`gate-${gate}`} x={p.x} y={p.y + 3.5} textAnchor="middle" fontSize="10" fontWeight="900" fill={gateTextColor(source)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="2.4" strokeLinejoin="round">{gate}</text>;
       })}
     </g>
 
-    <g transform="translate(450 906)">
+    <g transform="translate(450 918)">
       <rect x="-245" y="-22" width="490" height="32" rx="16" fill="#ffffff" stroke="#ddd8cf" />
       <text x="0" y="-2" textAnchor="middle" fontSize="14" fontWeight="700" fill="#5a5650">{chart.type} · {chart.authority} · {chart.profile} · {chart.definition}</text>
     </g>
