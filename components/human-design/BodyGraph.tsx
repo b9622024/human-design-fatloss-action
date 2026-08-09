@@ -67,37 +67,43 @@ const GATE_PORTS: Record<number, Point> = {
   19: { x: 492, y: 725 }, 39: { x: 508, y: 730 }, 41: { x: 520, y: 740 },
 };
 
+/*
+ * V6 channel rails. Each route is intentionally separated from neighboring
+ * channels, so a channel keeps a recognizable lane from its source Gate port
+ * to its destination Gate port. Central channels stay compact while the
+ * Spleen / Solar Plexus branches use outside rails.
+ */
 const ROUTE_WAYPOINTS: Record<string, Point[]> = {
-  "16-48": [{ x: 365, y: 380 }, { x: 342, y: 465 }],
-  "20-57": [{ x: 360, y: 385 }, { x: 345, y: 485 }],
-  "10-20": [{ x: 405, y: 370 }],
-  "20-34": [{ x: 375, y: 430 }, { x: 390, y: 525 }],
-  "12-22": [{ x: 535, y: 380 }, { x: 555, y: 470 }],
-  "35-36": [{ x: 550, y: 390 }, { x: 565, y: 470 }],
-  "21-45": [{ x: 535, y: 360 }, { x: 560, y: 405 }],
-  "7-31": [{ x: 430, y: 370 }],
-  "13-33": [{ x: 470, y: 370 }],
-  "1-8": [{ x: 450, y: 373 }],
-  "2-14": [{ x: 430, y: 535 }],
-  "5-15": [{ x: 438, y: 540 }],
+  "16-48": [{ x: 374, y: 365 }, { x: 355, y: 455 }],
+  "20-57": [{ x: 360, y: 390 }, { x: 345, y: 485 }],
+  "10-20": [{ x: 398, y: 382 }],
+  "20-34": [{ x: 385, y: 410 }, { x: 385, y: 520 }],
+  "12-22": [{ x: 526, y: 382 }, { x: 548, y: 470 }],
+  "35-36": [{ x: 540, y: 394 }, { x: 563, y: 475 }],
+  "21-45": [{ x: 522, y: 345 }, { x: 548, y: 398 }],
+  "7-31": [{ x: 438, y: 370 }],
+  "13-33": [{ x: 468, y: 370 }],
+  "1-8": [{ x: 445, y: 372 }],
+  "2-14": [{ x: 430, y: 540 }],
+  "5-15": [{ x: 443, y: 540 }],
   "29-46": [{ x: 468, y: 540 }],
-  "10-34": [{ x: 390, y: 510 }, { x: 400, y: 555 }],
-  "34-57": [{ x: 375, y: 585 }],
-  "27-50": [{ x: 375, y: 602 }],
-  "32-54": [{ x: 330, y: 660 }, { x: 360, y: 700 }],
-  "18-58": [{ x: 320, y: 650 }, { x: 370, y: 700 }],
-  "28-38": [{ x: 305, y: 640 }, { x: 395, y: 705 }],
-  "3-60": [{ x: 430, y: 695 }],
-  "9-52": [{ x: 450, y: 695 }],
-  "42-53": [{ x: 470, y: 695 }],
-  "19-49": [{ x: 535, y: 680 }, { x: 565, y: 645 }],
-  "39-55": [{ x: 555, y: 690 }, { x: 590, y: 645 }],
-  "30-41": [{ x: 575, y: 695 }, { x: 615, y: 640 }],
-  "25-51": [{ x: 520, y: 447 }],
-  "26-44": [{ x: 500, y: 520 }, { x: 430, y: 555 }],
-  "37-40": [{ x: 585, y: 525 }],
-  "10-57": [{ x: 390, y: 500 }, { x: 365, y: 535 }],
-  "6-59": [{ x: 505, y: 615 }],
+  "10-34": [{ x: 390, y: 505 }, { x: 397, y: 555 }],
+  "34-57": [{ x: 378, y: 580 }],
+  "27-50": [{ x: 374, y: 605 }],
+  "32-54": [{ x: 320, y: 648 }, { x: 350, y: 697 }],
+  "18-58": [{ x: 305, y: 650 }, { x: 365, y: 700 }],
+  "28-38": [{ x: 294, y: 635 }, { x: 392, y: 704 }],
+  "3-60": [{ x: 430, y: 694 }],
+  "9-52": [{ x: 451, y: 694 }],
+  "42-53": [{ x: 472, y: 694 }],
+  "19-49": [{ x: 535, y: 685 }, { x: 567, y: 646 }],
+  "39-55": [{ x: 558, y: 692 }, { x: 592, y: 645 }],
+  "30-41": [{ x: 580, y: 700 }, { x: 616, y: 640 }],
+  "25-51": [{ x: 521, y: 446 }],
+  "26-44": [{ x: 512, y: 510 }, { x: 431, y: 555 }],
+  "37-40": [{ x: 590, y: 522 }],
+  "10-57": [{ x: 388, y: 495 }, { x: 365, y: 535 }],
+  "6-59": [{ x: 515, y: 614 }],
 };
 
 function centerShape(center: CenterId, defined: boolean) {
@@ -183,18 +189,31 @@ function splitAtHalf(points: Point[]) {
   return { left, right };
 }
 
-function pointsString(points: Point[]) {
-  return points.map((p) => `${p.x},${p.y}`).join(" ");
+function smoothPath(points: Point[]) {
+  if (points.length < 2) return "";
+  if (points.length === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const p = points[i];
+    const next = points[i + 1];
+    const mx = (p.x + next.x) / 2;
+    const my = (p.y + next.y) / 2;
+    d += ` Q ${p.x} ${p.y} ${mx} ${my}`;
+  }
+  const last = points[points.length - 1];
+  d += ` T ${last.x} ${last.y}`;
+  return d;
 }
 
-function ColoredPolyline({ points, source, width = 7 }: { points: Point[]; source: GateSource; width?: number }) {
+function ColoredPath({ points, source, width = 6.5 }: { points: Point[]; source: GateSource; width?: number }) {
   const colors = sourceColors(source);
   if (!colors.length) return null;
-  if (colors.length === 1) return <polyline points={pointsString(points)} fill="none" stroke={colors[0]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />;
+  const d = smoothPath(points);
+  if (colors.length === 1) return <path d={d} fill="none" stroke={colors[0]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />;
   return (
     <g>
-      <polyline points={pointsString(points)} fill="none" stroke={colors[0]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
-      <polyline points={pointsString(points)} fill="none" stroke={colors[1]} strokeWidth={Math.max(3, width / 2)} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={colors[0]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={colors[1]} strokeWidth={Math.max(2.8, width / 2)} strokeLinecap="round" strokeLinejoin="round" />
     </g>
   );
 }
@@ -249,13 +268,13 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
           const complete = activeChannels.has(id);
           const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
           const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
-          const leftActive = complete ? left : trimToFraction(left, 0.74);
-          const rightActive = complete ? right : trimToFraction(right, 0.74);
+          const leftActive = complete ? left : trimToFraction(left, 0.55);
+          const rightActive = complete ? right : trimToFraction(right, 0.55);
           return (
             <g key={id}>
-              <polyline points={pointsString(path)} fill="none" stroke="#dedbd5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-              {sourceA !== "inactive" && <ColoredPolyline points={leftActive} source={sourceA} />}
-              {sourceB !== "inactive" && <ColoredPolyline points={rightActive} source={sourceB} />}
+              <path d={smoothPath(path)} fill="none" stroke="#ddd9d2" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+              {sourceA !== "inactive" && <ColoredPath points={leftActive} source={sourceA} />}
+              {sourceB !== "inactive" && <ColoredPath points={rightActive} source={sourceB} />}
             </g>
           );
         })}
@@ -276,8 +295,8 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
           const source = gateSources.get(gate) ?? "inactive";
           return (
             <g key={`gate-${gate}`}>
-              <circle cx={port.x} cy={port.y} r="8.5" fill="#fbfaf7" opacity="0.96" />
-              <text x={port.x} y={port.y + 3.4} textAnchor="middle" fontSize="9.5" fontWeight="900" fill={gateTextColor(source)}>{gate}</text>
+              <circle cx={port.x} cy={port.y} r="8.2" fill="#fbfaf7" opacity="0.97" />
+              <text x={port.x} y={port.y + 3.2} textAnchor="middle" fontSize="9.2" fontWeight="900" fill={gateTextColor(source)}>{gate}</text>
             </g>
           );
         })}
