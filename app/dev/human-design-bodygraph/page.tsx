@@ -47,10 +47,10 @@ export default function HumanDesignBodyGraphPage() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V8</div>
+        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V9</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />BodyGraph SVG</h1>
         <p className="lead">
-          V8 重新調整九大中心的比例與位置：Ego 往中央靠近，Spleen／Solar Plexus 向左右外擴，並把 64 個 Gate 固定在各 Center 的實際邊緣。Channel 仍採 Gate-to-Gate 直線，藉由幾何重排減少交叉與線條打架。
+          V9 重建 Gate Port 幾何來源：Center 圖形與 Gate 座標共用同一套邊界資料，Gate 不再以手動 x/y 猜位置。所有 Gate 都由 polygon edge 或 rectangle border 即時計算，因此數字與 Channel 端點會真正落在圖形邊界上。
         </p>
       </section>
 
@@ -65,16 +65,16 @@ export default function HumanDesignBodyGraphPage() {
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ padding: 14, borderRadius: 12, border: "1px solid #d9d4ca", fontSize: 16 }} />
           </label>
           <button type="submit" disabled={loading} style={{ padding: 15, border: 0, borderRadius: 999, background: "#17172d", color: "white", fontWeight: 700, fontSize: 15 }}>
-            {loading ? "計算中…" : "產生 BodyGraph V8"}
+            {loading ? "計算中…" : "產生 BodyGraph V9"}
           </button>
         </form>
       </section>
 
       {result?.coreChart && (
         <section className="card" style={{ marginTop: 18 }}>
-          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V8</h2>
+          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V9</h2>
           <p style={{ marginTop: -4, opacity: 0.68, lineHeight: 1.6 }}>
-            黑色＝Personality，紅色＝Design。V8 的重點不是改運算，而是重建 BodyGraph 幾何：中心位置更接近傳統比例，每個 Gate 數字都直接依附在 Center 邊界，直線 Channel 從 Gate Port 到 Gate Port。
+            黑色＝Personality，紅色＝Design。V9 的重點是「真正貼邊」：Center 的可見圖形、Gate 數字與 Channel 起點使用同一個幾何邊界來源；Ego 靠近中央，左右三角向外展開，Channel 維持直接 Gate-to-Gate 連線。
           </p>
           <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
             <BodyGraph
