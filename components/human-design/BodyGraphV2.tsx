@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "R2.0";
+export const BODYGRAPH_RENDERER_VERSION = "R2.1";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -14,9 +14,9 @@ type Props = {
 
 type Point = { x: number; y: number };
 type GateSource = "personality" | "design" | "both" | "inactive";
-type PolygonShape = { kind: "polygon"; points: Point[] };
-type RectShape = { kind: "rect"; x: number; y: number; width: number; height: number; rx: number };
-type Shape = PolygonShape | RectShape;
+type Shape =
+  | { kind: "polygon"; points: Point[] }
+  | { kind: "rect"; x: number; y: number; width: number; height: number; rx: number };
 
 const CENTER_FILL: Record<CenterId, string> = {
   Head: "#f4dd62",
@@ -30,30 +30,34 @@ const CENTER_FILL: Record<CenterId, string> = {
   Root: "#b6825d",
 };
 
-// Renderer 2.0 uses a fixed canonical BodyGraph scaffold. Gate coordinates are
-// derived from center edges, so labels and channel endpoints share the same source.
+/*
+ * R2.1: fixed canonical scaffold, tuned from the reference proportions.
+ * The two side triangles are pushed outward, Ego stays tight to G, and all
+ * channel endpoints are literal center-boundary ports.  Port ordering is chosen
+ * to minimise crossings instead of simply following numeric gate order.
+ */
 const CENTER_SHAPES: Record<CenterId, Shape> = {
-  Head: { kind: "polygon", points: [{ x: 450, y: 54 }, { x: 410, y: 132 }, { x: 490, y: 132 }] },
-  Ajna: { kind: "polygon", points: [{ x: 410, y: 164 }, { x: 490, y: 164 }, { x: 450, y: 238 }] },
-  Throat: { kind: "rect", x: 410, y: 270, width: 80, height: 88, rx: 5 },
-  G: { kind: "polygon", points: [{ x: 450, y: 392 }, { x: 500, y: 440 }, { x: 450, y: 490 }, { x: 400, y: 440 }] },
-  Ego: { kind: "polygon", points: [{ x: 535, y: 414 }, { x: 510, y: 474 }, { x: 565, y: 474 }] },
-  Spleen: { kind: "polygon", points: [{ x: 245, y: 520 }, { x: 355, y: 610 }, { x: 245, y: 690 }] },
-  "Solar Plexus": { kind: "polygon", points: [{ x: 655, y: 520 }, { x: 545, y: 610 }, { x: 655, y: 690 }] },
-  Sacral: { kind: "rect", x: 405, y: 585, width: 90, height: 104, rx: 8 },
-  Root: { kind: "rect", x: 390, y: 770, width: 120, height: 104, rx: 8 },
+  Head: { kind: "polygon", points: [{ x: 450, y: 48 }, { x: 405, y: 128 }, { x: 495, y: 128 }] },
+  Ajna: { kind: "polygon", points: [{ x: 405, y: 158 }, { x: 495, y: 158 }, { x: 450, y: 238 }] },
+  Throat: { kind: "rect", x: 402, y: 268, width: 96, height: 92, rx: 6 },
+  G: { kind: "polygon", points: [{ x: 450, y: 392 }, { x: 502, y: 442 }, { x: 450, y: 494 }, { x: 398, y: 442 }] },
+  Ego: { kind: "polygon", points: [{ x: 528, y: 414 }, { x: 510, y: 474 }, { x: 566, y: 474 }] },
+  Spleen: { kind: "polygon", points: [{ x: 160, y: 526 }, { x: 352, y: 610 }, { x: 160, y: 698 }] },
+  "Solar Plexus": { kind: "polygon", points: [{ x: 740, y: 526 }, { x: 548, y: 610 }, { x: 740, y: 698 }] },
+  Sacral: { kind: "rect", x: 402, y: 584, width: 96, height: 108, rx: 9 },
+  Root: { kind: "rect", x: 382, y: 770, width: 136, height: 108, rx: 9 },
 };
 
 const CENTER_LABELS: Record<CenterId, Point> = {
-  Head: { x: 450, y: 94 },
-  Ajna: { x: 450, y: 196 },
-  Throat: { x: 450, y: 316 },
+  Head: { x: 450, y: 90 },
+  Ajna: { x: 450, y: 194 },
+  Throat: { x: 450, y: 314 },
   G: { x: 450, y: 444 },
-  Ego: { x: 538, y: 450 },
-  Spleen: { x: 286, y: 610 },
-  "Solar Plexus": { x: 614, y: 610 },
-  Sacral: { x: 450, y: 640 },
-  Root: { x: 450, y: 830 },
+  Ego: { x: 538, y: 451 },
+  Spleen: { x: 235, y: 613 },
+  "Solar Plexus": { x: 665, y: 613 },
+  Sacral: { x: 450, y: 641 },
+  Root: { x: 450, y: 832 },
 };
 
 const BODY_SYMBOL: Record<string, string> = {
@@ -62,82 +66,55 @@ const BODY_SYMBOL: Record<string, string> = {
   Uranus: "♅", Neptune: "♆", Pluto: "♇",
 };
 
-function lerpPoint(a: Point, b: Point, t: number): Point {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-}
+/*
+ * Canonical gate ports.  These are intentionally explicit.  The renderer no
+ * longer interpolates the dense gate clusters because that was the source of
+ * the repeated spacing/crossing regressions in V11-V15/R2.0.
+ */
+const GATE_PORTS: Record<number, Point> = {
+  64: { x: 420, y: 128 }, 61: { x: 450, y: 128 }, 63: { x: 480, y: 128 },
+  47: { x: 420, y: 158 }, 24: { x: 450, y: 158 }, 4: { x: 480, y: 158 },
+  17: { x: 420, y: 208 }, 43: { x: 450, y: 238 }, 11: { x: 480, y: 208 },
 
-function spreadOnEdge(target: Record<number, Point>, gates: number[], a: Point, b: Point, start = 0.14, end = 0.86) {
-  if (gates.length === 1) {
-    target[gates[0]] = lerpPoint(a, b, (start + end) / 2);
-    return;
-  }
-  gates.forEach((gate, index) => {
-    const t = start + (end - start) * (index / (gates.length - 1));
-    target[gate] = lerpPoint(a, b, t);
-  });
-}
+  62: { x: 423, y: 268 }, 23: { x: 450, y: 268 }, 56: { x: 477, y: 268 },
+  16: { x: 402, y: 288 }, 20: { x: 402, y: 333 },
+  45: { x: 498, y: 286 }, 12: { x: 498, y: 312 }, 35: { x: 498, y: 338 },
+  31: { x: 423, y: 360 }, 8: { x: 450, y: 360 }, 33: { x: 477, y: 360 },
 
-function buildGatePorts(): Record<number, Point> {
-  const p: Record<number, Point> = {};
+  7: { x: 450, y: 392 }, 1: { x: 424, y: 417 }, 13: { x: 476, y: 417 },
+  10: { x: 398, y: 442 }, 25: { x: 502, y: 442 },
+  2: { x: 424, y: 468 }, 15: { x: 450, y: 494 }, 46: { x: 476, y: 468 },
 
-  // Head / Ajna vertical crown.
-  spreadOnEdge(p, [64, 61, 63], { x: 410, y: 132 }, { x: 490, y: 132 }, 0.18, 0.82);
-  spreadOnEdge(p, [47, 24, 4], { x: 410, y: 164 }, { x: 490, y: 164 }, 0.18, 0.82);
-  p[17] = lerpPoint({ x: 410, y: 164 }, { x: 450, y: 238 }, 0.72);
-  p[43] = { x: 450, y: 238 };
-  p[11] = lerpPoint({ x: 490, y: 164 }, { x: 450, y: 238 }, 0.72);
+  21: { x: 522, y: 434 }, 51: { x: 514, y: 459 }, 26: { x: 524, y: 474 }, 40: { x: 554, y: 474 },
 
-  // Throat.
-  spreadOnEdge(p, [62, 23, 56], { x: 410, y: 270 }, { x: 490, y: 270 }, 0.16, 0.84);
-  spreadOnEdge(p, [16, 20], { x: 410, y: 274 }, { x: 410, y: 352 }, 0.20, 0.78);
-  spreadOnEdge(p, [45, 12, 35], { x: 490, y: 274 }, { x: 490, y: 352 }, 0.14, 0.86);
-  spreadOnEdge(p, [31, 8, 33], { x: 410, y: 358 }, { x: 490, y: 358 }, 0.18, 0.82);
+  /* Spleen: inner gates separated vertically; root gates fan left-to-right. */
+  48: { x: 330, y: 600 },
+  57: { x: 349, y: 610 },
+  44: { x: 340, y: 622 },
+  50: { x: 320, y: 638 },
+  32: { x: 296, y: 650 },
+  18: { x: 248, y: 672 },
+  28: { x: 196, y: 694 },
 
-  // G center.
-  p[7] = { x: 450, y: 392 };
-  p[1] = lerpPoint({ x: 450, y: 392 }, { x: 400, y: 440 }, 0.50);
-  p[13] = lerpPoint({ x: 450, y: 392 }, { x: 500, y: 440 }, 0.50);
-  p[10] = { x: 400, y: 440 };
-  p[25] = { x: 500, y: 440 };
-  p[2] = lerpPoint({ x: 400, y: 440 }, { x: 450, y: 490 }, 0.56);
-  p[15] = { x: 450, y: 490 };
-  p[46] = lerpPoint({ x: 500, y: 440 }, { x: 450, y: 490 }, 0.56);
+  /* Solar Plexus mirrors Spleen. */
+  36: { x: 570, y: 600 },
+  22: { x: 551, y: 610 },
+  37: { x: 560, y: 622 },
+  6: { x: 580, y: 638 },
+  49: { x: 604, y: 650 },
+  55: { x: 652, y: 672 },
+  30: { x: 704, y: 694 },
 
-  // Ego triangle.
-  p[21] = lerpPoint({ x: 535, y: 414 }, { x: 510, y: 474 }, 0.30);
-  p[51] = lerpPoint({ x: 535, y: 414 }, { x: 510, y: 474 }, 0.70);
-  p[26] = lerpPoint({ x: 510, y: 474 }, { x: 565, y: 474 }, 0.25);
-  p[40] = lerpPoint({ x: 510, y: 474 }, { x: 565, y: 474 }, 0.82);
+  /* Sacral top order is arranged by partner position to keep G↔Sacral lanes parallel. */
+  14: { x: 426, y: 584 }, 5: { x: 450, y: 584 }, 29: { x: 474, y: 584 },
+  34: { x: 402, y: 606 }, 27: { x: 402, y: 638 }, 59: { x: 402, y: 670 },
+  3: { x: 426, y: 692 }, 9: { x: 450, y: 692 }, 42: { x: 474, y: 692 },
 
-  // Spleen: inner point split into upper and lower rails, matching classic layouts.
-  const spleenTop = { x: 245, y: 520 };
-  const spleenInner = { x: 355, y: 610 };
-  const spleenBottom = { x: 245, y: 690 };
-  spreadOnEdge(p, [48, 57], spleenTop, spleenInner, 0.70, 0.90);
-  spreadOnEdge(p, [44, 50], spleenInner, spleenBottom, 0.10, 0.32);
-  spreadOnEdge(p, [32, 18, 28], spleenInner, spleenBottom, 0.48, 0.92);
-
-  // Solar Plexus mirrors Spleen.
-  const solarTop = { x: 655, y: 520 };
-  const solarInner = { x: 545, y: 610 };
-  const solarBottom = { x: 655, y: 690 };
-  spreadOnEdge(p, [36, 22], solarTop, solarInner, 0.70, 0.90);
-  spreadOnEdge(p, [37, 6], solarInner, solarBottom, 0.10, 0.32);
-  spreadOnEdge(p, [49, 55, 30], solarInner, solarBottom, 0.48, 0.92);
-
-  // Sacral.
-  spreadOnEdge(p, [5, 14, 29], { x: 405, y: 585 }, { x: 495, y: 585 }, 0.16, 0.84);
-  spreadOnEdge(p, [34, 27, 59], { x: 405, y: 588 }, { x: 405, y: 686 }, 0.14, 0.86);
-  spreadOnEdge(p, [3, 9, 42], { x: 405, y: 689 }, { x: 495, y: 689 }, 0.16, 0.84);
-
-  // Root. Seven upper gates are truly evenly distributed across the top edge.
-  spreadOnEdge(p, [54, 58, 38, 60, 52, 53, 19], { x: 390, y: 770 }, { x: 510, y: 770 }, 0.07, 0.93);
-  spreadOnEdge(p, [39, 41], { x: 510, y: 778 }, { x: 510, y: 866 }, 0.28, 0.76);
-
-  return p;
-}
-
-const GATE_PORTS = buildGatePorts();
+  /* Root top is crossing-minimised: Spleen lanes, then Sacral lanes, then Solar. */
+  38: { x: 394, y: 770 }, 58: { x: 410, y: 770 }, 54: { x: 426, y: 770 },
+  60: { x: 450, y: 770 }, 52: { x: 470, y: 770 }, 53: { x: 490, y: 770 }, 19: { x: 506, y: 770 },
+  39: { x: 518, y: 808 }, 41: { x: 518, y: 852 },
+};
 
 function canonicalChannelId(a: number, b: number) {
   return `${Math.min(a, b)}-${Math.max(a, b)}`;
@@ -152,12 +129,12 @@ function sourceForGate(gate: number, personality: Set<number>, design: Set<numbe
   return "inactive";
 }
 
-function midpoint(a: Point, b: Point): Point {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+function lerp(a: Point, b: Point, t: number): Point {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
-function channelStub(a: Point, b: Point, fraction = 0.30): Point {
-  return lerpPoint(a, b, fraction);
+function midpoint(a: Point, b: Point): Point {
+  return lerp(a, b, 0.5);
 }
 
 function offsetSegment(a: Point, b: Point, offset: number): [Point, Point] {
@@ -171,13 +148,13 @@ function offsetSegment(a: Point, b: Point, offset: number): [Point, Point] {
 
 function ColoredLine({ a, b, source }: { a: Point; b: Point; source: GateSource }) {
   if (source === "inactive") return null;
-  if (source === "personality") return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#171720" strokeWidth="5.4" strokeLinecap="butt" />;
-  if (source === "design") return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#d94a40" strokeWidth="5.4" strokeLinecap="butt" />;
+  if (source === "personality") return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#171720" strokeWidth="5.2" strokeLinecap="butt" />;
+  if (source === "design") return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#d94a40" strokeWidth="5.2" strokeLinecap="butt" />;
   const [a1, b1] = offsetSegment(a, b, -1.7);
   const [a2, b2] = offsetSegment(a, b, 1.7);
   return <g>
-    <line x1={a1.x} y1={a1.y} x2={b1.x} y2={b1.y} stroke="#171720" strokeWidth="2.5" strokeLinecap="butt" />
-    <line x1={a2.x} y1={a2.y} x2={b2.x} y2={b2.y} stroke="#d94a40" strokeWidth="2.5" strokeLinecap="butt" />
+    <line x1={a1.x} y1={a1.y} x2={b1.x} y2={b1.y} stroke="#171720" strokeWidth="2.4" strokeLinecap="butt" />
+    <line x1={a2.x} y1={a2.y} x2={b2.x} y2={b2.y} stroke="#d94a40" strokeWidth="2.4" strokeLinecap="butt" />
   </g>;
 }
 
@@ -193,7 +170,7 @@ function gateTextColor(source: GateSource) {
   if (source === "design") return "#d94a40";
   if (source === "personality") return "#171720";
   if (source === "both") return "#8b2730";
-  return "#66615a";
+  return "#67625b";
 }
 
 function GateBadge({ gate, source }: { gate: number; source: GateSource }) {
@@ -231,18 +208,19 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
     <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left" />
     <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right" />
 
-    {/* All channel rails are drawn first. They remain single straight gate-to-gate segments. */}
+    {/* Background topology: deliberately very light so crossings do not dominate. */}
     <g>
       {CHANNELS.map((channel) => {
         const a = GATE_PORTS[channel.gateA];
         const b = GATE_PORTS[channel.gateB];
         if (!a || !b) return null;
         const id = canonicalChannelId(channel.gateA, channel.gateB);
-        return <line key={`rail-${id}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#d8d5cf" strokeWidth="2" opacity="0.72" />;
+        return <line key={`rail-${id}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#cfcac2" strokeWidth="1.35" opacity="0.34" />;
       })}
     </g>
 
-    {/* Active layers are drawn above rails but below center shapes to reduce visual collisions. */}
+    {/* Active channel layer. Complete channels use the full straight segment;
+        hanging gates stop at 28% of the channel length. */}
     <g>
       {CHANNELS.map((channel) => {
         const a = GATE_PORTS[channel.gateA];
@@ -260,12 +238,13 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
           </g>;
         }
         return <g key={`active-${id}`}>
-          <ColoredLine a={a} b={channelStub(a, b)} source={sourceA} />
-          <ColoredLine a={b} b={channelStub(b, a)} source={sourceB} />
+          <ColoredLine a={a} b={lerp(a, b, 0.28)} source={sourceA} />
+          <ColoredLine a={b} b={lerp(b, a, 0.28)} source={sourceB} />
         </g>;
       })}
     </g>
 
+    {/* Centers cover channel interiors; gates are rendered last on the boundaries. */}
     <g>
       {(Object.keys(CENTER_SHAPES) as CenterId[]).map((center) => <g key={center}>
         {renderCenter(center, defined.has(center))}
