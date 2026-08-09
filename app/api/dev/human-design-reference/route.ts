@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         stage: "activation-mapping",
         astronomyEngine: "2.1.19",
         raveMandalaMapping: "gate-41-origin-302deg-v1",
-        nodePolicy: "true-node-meeus-perturbation-series",
+        nodePolicy: "true-node-osculating-orbital-plane",
         productionHumanDesignReady: false,
       },
       birthTime: normalized,
