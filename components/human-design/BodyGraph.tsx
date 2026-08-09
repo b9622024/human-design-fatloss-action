@@ -17,87 +17,88 @@ type Shape =
   | { kind: "rect"; x: number; y: number; width: number; height: number; rx: number };
 
 const CENTER_FILL: Record<CenterId, string> = {
-  Head: "#f3db64",
-  Ajna: "#78b89b",
-  Throat: "#a88255",
-  G: "#f2d95b",
-  Ego: "#d65c62",
-  Spleen: "#ad7145",
-  "Solar Plexus": "#c68b5a",
-  Sacral: "#d25f59",
-  Root: "#b67d54",
-};
-
-const CENTER_LABELS: Record<CenterId, Point> = {
-  Head: { x: 450, y: 80 },
-  Ajna: { x: 450, y: 188 },
-  Throat: { x: 450, y: 310 },
-  G: { x: 450, y: 438 },
-  Ego: { x: 548, y: 457 },
-  Spleen: { x: 220, y: 579 },
-  "Solar Plexus": { x: 680, y: 579 },
-  Sacral: { x: 450, y: 611 },
-  Root: { x: 450, y: 757 },
+  Head: "#f4dd62",
+  Ajna: "#86bca4",
+  Throat: "#a98659",
+  G: "#f2dc62",
+  Ego: "#d76466",
+  Spleen: "#ad754a",
+  "Solar Plexus": "#c38d5f",
+  Sacral: "#cf635d",
+  Root: "#b6825d",
 };
 
 /*
- * V9 uses one geometry source of truth for BOTH the visible center shapes and
- * their gate ports. A gate port is derived from an actual polygon edge or rect
- * border, so a gate label can no longer drift away from the shape boundary.
+ * V10 architecture reset.
+ * This is no longer a generic graph renderer. It is a fixed Human Design
+ * BodyGraph drawing system: compact canonical center proportions, explicit
+ * gate ports, and channel-specific straight/polyline rail corridors.
  */
 const CENTER_SHAPES: Record<CenterId, Shape> = {
   Head: {
     kind: "polygon",
     points: [
-      { x: 450, y: 38 },
-      { x: 390, y: 118 },
-      { x: 510, y: 118 },
+      { x: 450, y: 48 },
+      { x: 414, y: 116 },
+      { x: 486, y: 116 },
     ],
   },
   Ajna: {
     kind: "polygon",
     points: [
-      { x: 390, y: 152 },
-      { x: 510, y: 152 },
-      { x: 450, y: 228 },
+      { x: 414, y: 146 },
+      { x: 486, y: 146 },
+      { x: 450, y: 214 },
     ],
   },
-  Throat: { kind: "rect", x: 390, y: 270, width: 120, height: 82, rx: 7 },
+  Throat: { kind: "rect", x: 414, y: 240, width: 72, height: 76, rx: 5 },
   G: {
     kind: "polygon",
     points: [
-      { x: 450, y: 388 },
-      { x: 505, y: 438 },
-      { x: 450, y: 492 },
-      { x: 395, y: 438 },
+      { x: 450, y: 342 },
+      { x: 493, y: 383 },
+      { x: 450, y: 426 },
+      { x: 407, y: 383 },
     ],
   },
   Ego: {
     kind: "polygon",
     points: [
-      { x: 548, y: 413 },
-      { x: 512, y: 486 },
-      { x: 584, y: 486 },
+      { x: 524, y: 350 },
+      { x: 503, y: 404 },
+      { x: 554, y: 404 },
     ],
   },
   Spleen: {
     kind: "polygon",
     points: [
-      { x: 115, y: 515 },
-      { x: 330, y: 575 },
-      { x: 115, y: 650 },
+      { x: 284, y: 444 },
+      { x: 382, y: 486 },
+      { x: 284, y: 536 },
     ],
   },
   "Solar Plexus": {
     kind: "polygon",
     points: [
-      { x: 785, y: 515 },
-      { x: 570, y: 575 },
-      { x: 785, y: 650 },
+      { x: 616, y: 444 },
+      { x: 518, y: 486 },
+      { x: 616, y: 536 },
     ],
   },
-  Sacral: { kind: "rect", x: 390, y: 570, width: 120, height: 84, rx: 10 },
-  Root: { kind: "rect", x: 385, y: 710, width: 130, height: 92, rx: 10 },
+  Sacral: { kind: "rect", x: 414, y: 462, width: 72, height: 78, rx: 6 },
+  Root: { kind: "rect", x: 408, y: 584, width: 84, height: 84, rx: 6 },
+};
+
+const CENTER_LABELS: Record<CenterId, Point> = {
+  Head: { x: 450, y: 83 },
+  Ajna: { x: 450, y: 174 },
+  Throat: { x: 450, y: 280 },
+  G: { x: 450, y: 386 },
+  Ego: { x: 529, y: 386 },
+  Spleen: { x: 322, y: 492 },
+  "Solar Plexus": { x: 578, y: 492 },
+  Sacral: { x: 450, y: 505 },
+  Root: { x: 450, y: 630 },
 };
 
 const BODY_SYMBOL: Record<string, string> = {
@@ -116,149 +117,111 @@ const BODY_SYMBOL: Record<string, string> = {
   Pluto: "♇",
 };
 
-function edgePoint(a: Point, b: Point, t: number): Point {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-}
+const GATE_PORTS: Record<number, Point> = {
+  64: { x: 432, y: 116 }, 61: { x: 450, y: 116 }, 63: { x: 468, y: 116 },
+  47: { x: 432, y: 146 }, 24: { x: 450, y: 146 }, 4: { x: 468, y: 146 },
+  17: { x: 432, y: 180 }, 43: { x: 450, y: 214 }, 11: { x: 468, y: 180 },
 
-function polygonPort(center: CenterId, edgeIndex: number, t: number): Point {
-  const shape = CENTER_SHAPES[center];
-  if (shape.kind !== "polygon") throw new Error(`${center} is not a polygon`);
-  const a = shape.points[edgeIndex];
-  const b = shape.points[(edgeIndex + 1) % shape.points.length];
-  return edgePoint(a, b, t);
-}
+  62: { x: 432, y: 240 }, 23: { x: 450, y: 240 }, 56: { x: 468, y: 240 },
+  16: { x: 414, y: 258 }, 20: { x: 414, y: 283 },
+  45: { x: 486, y: 255 }, 12: { x: 486, y: 278 }, 35: { x: 486, y: 301 },
+  31: { x: 432, y: 316 }, 8: { x: 450, y: 316 }, 33: { x: 468, y: 316 },
 
-function rectPort(center: CenterId, side: "top" | "right" | "bottom" | "left", t: number): Point {
-  const shape = CENTER_SHAPES[center];
-  if (shape.kind !== "rect") throw new Error(`${center} is not a rect`);
-  const { x, y, width, height } = shape;
-  if (side === "top") return { x: x + width * t, y };
-  if (side === "right") return { x: x + width, y: y + height * t };
-  if (side === "bottom") return { x: x + width * t, y: y + height };
-  return { x, y: y + height * t };
+  1: { x: 427, y: 364 }, 7: { x: 450, y: 342 }, 13: { x: 473, y: 364 },
+  10: { x: 407, y: 383 }, 25: { x: 493, y: 383 },
+  2: { x: 427, y: 406 }, 15: { x: 450, y: 426 }, 46: { x: 473, y: 406 },
+
+  21: { x: 516, y: 371 }, 51: { x: 508, y: 391 }, 26: { x: 516, y: 404 }, 40: { x: 545, y: 404 },
+
+  48: { x: 363, y: 478 }, 57: { x: 374, y: 483 }, 44: { x: 382, y: 486 }, 50: { x: 371, y: 498 },
+  32: { x: 342, y: 507 }, 18: { x: 320, y: 518 }, 28: { x: 298, y: 529 },
+
+  36: { x: 537, y: 478 }, 22: { x: 526, y: 483 }, 37: { x: 518, y: 486 }, 6: { x: 529, y: 498 },
+  49: { x: 558, y: 507 }, 55: { x: 580, y: 518 }, 30: { x: 602, y: 529 },
+
+  5: { x: 432, y: 462 }, 14: { x: 450, y: 462 }, 29: { x: 468, y: 462 },
+  34: { x: 414, y: 480 }, 27: { x: 414, y: 501 }, 59: { x: 414, y: 522 },
+  3: { x: 432, y: 540 }, 9: { x: 450, y: 540 }, 42: { x: 468, y: 540 },
+
+  54: { x: 414, y: 584 }, 58: { x: 426, y: 584 }, 38: { x: 438, y: 584 },
+  60: { x: 450, y: 584 }, 52: { x: 462, y: 584 }, 53: { x: 474, y: 584 }, 19: { x: 486, y: 584 },
+  39: { x: 492, y: 611 }, 41: { x: 492, y: 643 },
+};
+
+const GATE_CENTER = new Map<number, CenterId>();
+for (const channel of CHANNELS) {
+  GATE_CENTER.set(channel.gateA, channel.centerA);
+  GATE_CENTER.set(channel.gateB, channel.centerB);
 }
 
 /*
- * Gate placement follows the visible center perimeter.
- * Polygon edgeIndex follows each shape's point order above.
+ * Explicit channel rails. They are intentionally piecewise-straight so the
+ * visible network resembles the traditional BodyGraph rather than a generic
+ * force-directed graph. Endpoints are always the actual gate ports.
  */
-const GATE_PORTS: Record<number, Point> = {
-  // Head: bottom edge (edge 1: left-bottom -> right-bottom)
-  64: polygonPort("Head", 1, 0.20),
-  61: polygonPort("Head", 1, 0.50),
-  63: polygonPort("Head", 1, 0.80),
+const CHANNEL_ROUTES: Record<string, Point[]> = {
+  "47-64": [{ x: 432, y: 116 }, { x: 432, y: 146 }],
+  "24-61": [{ x: 450, y: 116 }, { x: 450, y: 146 }],
+  "4-63": [{ x: 468, y: 116 }, { x: 468, y: 146 }],
 
-  // Ajna: top edge + two lower sloped edges
-  47: polygonPort("Ajna", 0, 0.20),
-  24: polygonPort("Ajna", 0, 0.50),
-  4: polygonPort("Ajna", 0, 0.80),
-  17: polygonPort("Ajna", 2, 0.68),
-  43: { x: 450, y: 228 },
-  11: polygonPort("Ajna", 1, 0.68),
+  "17-62": [{ x: 432, y: 180 }, { x: 430, y: 211 }, { x: 432, y: 240 }],
+  "23-43": [{ x: 450, y: 214 }, { x: 450, y: 240 }],
+  "11-56": [{ x: 468, y: 180 }, { x: 470, y: 211 }, { x: 468, y: 240 }],
 
-  // Throat rectangle
-  62: rectPort("Throat", "top", 0.20),
-  23: rectPort("Throat", "top", 0.50),
-  56: rectPort("Throat", "top", 0.80),
-  16: rectPort("Throat", "left", 0.25),
-  20: rectPort("Throat", "left", 0.67),
-  45: rectPort("Throat", "right", 0.22),
-  12: rectPort("Throat", "right", 0.50),
-  35: rectPort("Throat", "right", 0.78),
-  31: rectPort("Throat", "bottom", 0.20),
-  8: rectPort("Throat", "bottom", 0.50),
-  33: rectPort("Throat", "bottom", 0.80),
+  "16-48": [{ x: 414, y: 258 }, { x: 395, y: 340 }, { x: 380, y: 420 }, { x: 363, y: 478 }],
+  "20-57": [{ x: 414, y: 283 }, { x: 401, y: 347 }, { x: 388, y: 421 }, { x: 374, y: 483 }],
+  "10-20": [{ x: 414, y: 283 }, { x: 405, y: 330 }, { x: 407, y: 383 }],
+  "20-34": [{ x: 414, y: 283 }, { x: 402, y: 365 }, { x: 402, y: 447 }, { x: 414, y: 480 }],
 
-  // G diamond
-  1: polygonPort("G", 3, 0.35),
-  7: { x: 450, y: 388 },
-  13: polygonPort("G", 0, 0.35),
-  10: { x: 395, y: 438 },
-  25: { x: 505, y: 438 },
-  2: polygonPort("G", 2, 0.35),
-  15: { x: 450, y: 492 },
-  46: polygonPort("G", 1, 0.65),
+  "12-22": [{ x: 486, y: 278 }, { x: 500, y: 350 }, { x: 514, y: 425 }, { x: 526, y: 483 }],
+  "35-36": [{ x: 486, y: 301 }, { x: 504, y: 360 }, { x: 522, y: 426 }, { x: 537, y: 478 }],
+  "21-45": [{ x: 486, y: 255 }, { x: 502, y: 315 }, { x: 516, y: 371 }],
 
-  // Ego triangle, pulled close to G and all ports sit on its perimeter
-  21: polygonPort("Ego", 0, 0.24),
-  51: polygonPort("Ego", 0, 0.62),
-  26: polygonPort("Ego", 1, 0.18),
-  40: polygonPort("Ego", 1, 0.82),
+  "7-31": [{ x: 432, y: 316 }, { x: 440, y: 331 }, { x: 450, y: 342 }],
+  "1-8": [{ x: 450, y: 316 }, { x: 442, y: 340 }, { x: 427, y: 364 }],
+  "13-33": [{ x: 468, y: 316 }, { x: 470, y: 339 }, { x: 473, y: 364 }],
 
-  // Spleen triangle, farther left to open channel corridors
-  48: polygonPort("Spleen", 0, 0.76),
-  57: polygonPort("Spleen", 0, 0.91),
-  44: { x: 330, y: 575 },
-  50: polygonPort("Spleen", 1, 0.14),
-  32: polygonPort("Spleen", 1, 0.46),
-  18: polygonPort("Spleen", 1, 0.67),
-  28: polygonPort("Spleen", 1, 0.84),
+  "2-14": [{ x: 427, y: 406 }, { x: 438, y: 434 }, { x: 450, y: 462 }],
+  "5-15": [{ x: 432, y: 462 }, { x: 440, y: 443 }, { x: 450, y: 426 }],
+  "29-46": [{ x: 468, y: 462 }, { x: 472, y: 434 }, { x: 473, y: 406 }],
+  "10-34": [{ x: 407, y: 383 }, { x: 403, y: 432 }, { x: 414, y: 480 }],
 
-  // Solar Plexus mirror
-  36: polygonPort("Solar Plexus", 0, 0.76),
-  22: polygonPort("Solar Plexus", 0, 0.91),
-  37: { x: 570, y: 575 },
-  6: polygonPort("Solar Plexus", 1, 0.14),
-  49: polygonPort("Solar Plexus", 1, 0.46),
-  55: polygonPort("Solar Plexus", 1, 0.67),
-  30: polygonPort("Solar Plexus", 1, 0.84),
+  "34-57": [{ x: 414, y: 480 }, { x: 395, y: 481 }, { x: 374, y: 483 }],
+  "27-50": [{ x: 414, y: 501 }, { x: 392, y: 501 }, { x: 371, y: 498 }],
 
-  // Sacral rectangle
-  5: rectPort("Sacral", "top", 0.20),
-  14: rectPort("Sacral", "top", 0.50),
-  29: rectPort("Sacral", "top", 0.80),
-  34: rectPort("Sacral", "left", 0.22),
-  27: rectPort("Sacral", "left", 0.50),
-  59: rectPort("Sacral", "left", 0.78),
-  3: rectPort("Sacral", "bottom", 0.20),
-  9: rectPort("Sacral", "bottom", 0.50),
-  42: rectPort("Sacral", "bottom", 0.80),
+  "32-54": [{ x: 342, y: 507 }, { x: 366, y: 545 }, { x: 414, y: 584 }],
+  "18-58": [{ x: 320, y: 518 }, { x: 361, y: 552 }, { x: 426, y: 584 }],
+  "28-38": [{ x: 298, y: 529 }, { x: 355, y: 559 }, { x: 438, y: 584 }],
 
-  // Root rectangle: seven gates on top, two on right edge
-  54: rectPort("Root", "top", 0.08),
-  58: rectPort("Root", "top", 0.20),
-  38: rectPort("Root", "top", 0.33),
-  60: rectPort("Root", "top", 0.46),
-  52: rectPort("Root", "top", 0.59),
-  53: rectPort("Root", "top", 0.72),
-  19: rectPort("Root", "top", 0.88),
-  39: rectPort("Root", "right", 0.38),
-  41: rectPort("Root", "right", 0.72),
+  "3-60": [{ x: 432, y: 540 }, { x: 440, y: 562 }, { x: 450, y: 584 }],
+  "9-52": [{ x: 450, y: 540 }, { x: 456, y: 562 }, { x: 462, y: 584 }],
+  "42-53": [{ x: 468, y: 540 }, { x: 471, y: 562 }, { x: 474, y: 584 }],
+
+  "19-49": [{ x: 486, y: 584 }, { x: 520, y: 552 }, { x: 558, y: 507 }],
+  "39-55": [{ x: 492, y: 611 }, { x: 535, y: 560 }, { x: 580, y: 518 }],
+  "30-41": [{ x: 492, y: 643 }, { x: 550, y: 584 }, { x: 602, y: 529 }],
+
+  "25-51": [{ x: 493, y: 383 }, { x: 500, y: 386 }, { x: 508, y: 391 }],
+  "26-44": [{ x: 516, y: 404 }, { x: 465, y: 443 }, { x: 420, y: 469 }, { x: 382, y: 486 }],
+  "37-40": [{ x: 545, y: 404 }, { x: 534, y: 444 }, { x: 518, y: 486 }],
+  "10-57": [{ x: 407, y: 383 }, { x: 397, y: 430 }, { x: 387, y: 463 }, { x: 374, y: 483 }],
+  "6-59": [{ x: 414, y: 522 }, { x: 462, y: 517 }, { x: 500, y: 507 }, { x: 529, y: 498 }],
 };
-
-function renderCenter(center: CenterId, defined: boolean) {
-  const shape = CENTER_SHAPES[center];
-  const fill = defined ? CENTER_FILL[center] : "#ffffff";
-  const stroke = "#252433";
-  const strokeWidth = 2.8;
-
-  if (shape.kind === "rect") {
-    return (
-      <rect
-        x={shape.x}
-        y={shape.y}
-        width={shape.width}
-        height={shape.height}
-        rx={shape.rx}
-        fill={fill}
-        stroke={stroke}
-        strokeWidth={strokeWidth}
-      />
-    );
-  }
-
-  return (
-    <polygon
-      points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
-      fill={fill}
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-    />
-  );
-}
 
 function canonicalChannelId(gateA: number, gateB: number) {
   return `${Math.min(gateA, gateB)}-${Math.max(gateA, gateB)}`;
+}
+
+function routeFor(gateA: number, gateB: number): Point[] {
+  const id = canonicalChannelId(gateA, gateB);
+  const base = CHANNEL_ROUTES[id] ?? [GATE_PORTS[gateA], GATE_PORTS[gateB]];
+  const first = base[0];
+  const actualA = GATE_PORTS[gateA];
+  const actualB = GATE_PORTS[gateB];
+  if (!actualA || !actualB) return base;
+  const dA = Math.hypot(first.x - actualA.x, first.y - actualA.y);
+  const dB = Math.hypot(first.x - actualB.x, first.y - actualB.y);
+  return dA <= dB ? base : [...base].reverse();
 }
 
 function sourceForGate(gate: number, personality: Set<number>, design: Set<number>): GateSource {
@@ -271,91 +234,116 @@ function sourceForGate(gate: number, personality: Set<number>, design: Set<numbe
 }
 
 function sourceColors(source: GateSource) {
-  if (source === "personality") return ["#24212d"];
-  if (source === "design") return ["#d94a43"];
-  if (source === "both") return ["#24212d", "#d94a43"];
+  if (source === "personality") return ["#191820"];
+  if (source === "design") return ["#d84238"];
+  if (source === "both") return ["#191820", "#d84238"];
   return [];
 }
 
-function lerp(a: Point, b: Point, t: number): Point {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+function polylineLength(points: Point[]) {
+  let total = 0;
+  for (let i = 1; i < points.length; i += 1) total += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  return total;
 }
 
-function offsetSegment(a: Point, b: Point, offset: number): [Point, Point] {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const ox = (-dy / length) * offset;
-  const oy = (dx / length) * offset;
-  return [
-    { x: a.x + ox, y: a.y + oy },
-    { x: b.x + ox, y: b.y + oy },
-  ];
+function pointAtDistance(points: Point[], distance: number): { point: Point; segmentIndex: number } {
+  let remaining = distance;
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1];
+    const b = points[i];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (remaining <= len) {
+      const t = len === 0 ? 0 : remaining / len;
+      return { point: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, segmentIndex: i };
+    }
+    remaining -= len;
+  }
+  return { point: points[points.length - 1], segmentIndex: points.length - 1 };
 }
 
-function StraightSegment({ a, b, source, width = 6.8 }: { a: Point; b: Point; source: GateSource; width?: number }) {
+function sliceRoute(points: Point[], startFraction: number, endFraction: number): Point[] {
+  const total = polylineLength(points);
+  const start = pointAtDistance(points, total * startFraction);
+  const end = pointAtDistance(points, total * endFraction);
+  const result: Point[] = [start.point];
+  for (let i = start.segmentIndex; i < end.segmentIndex; i += 1) result.push(points[i]);
+  result.push(end.point);
+  return result;
+}
+
+function pointsString(points: Point[]) {
+  return points.map((p) => `${p.x},${p.y}`).join(" ");
+}
+
+function offsetPolyline(points: Point[], offset: number): Point[] {
+  if (points.length < 2) return points;
+  return points.map((p, i) => {
+    const prev = points[Math.max(0, i - 1)];
+    const next = points[Math.min(points.length - 1, i + 1)];
+    const dx = next.x - prev.x;
+    const dy = next.y - prev.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: p.x + (-dy / len) * offset, y: p.y + (dx / len) * offset };
+  });
+}
+
+function ColoredRail({ points, source }: { points: Point[]; source: GateSource }) {
   const colors = sourceColors(source);
   if (!colors.length) return null;
-
   if (colors.length === 1) {
-    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colors[0]} strokeWidth={width} strokeLinecap="butt" />;
+    return <polyline points={pointsString(points)} fill="none" stroke={colors[0]} strokeWidth="6" strokeLinejoin="miter" strokeLinecap="butt" />;
   }
-
-  const [a1, b1] = offsetSegment(a, b, -2.4);
-  const [a2, b2] = offsetSegment(a, b, 2.4);
   return (
     <g>
-      <line x1={a1.x} y1={a1.y} x2={b1.x} y2={b1.y} stroke={colors[0]} strokeWidth={3.3} strokeLinecap="butt" />
-      <line x1={a2.x} y1={a2.y} x2={b2.x} y2={b2.y} stroke={colors[1]} strokeWidth={3.3} strokeLinecap="butt" />
+      <polyline points={pointsString(offsetPolyline(points, -2.2))} fill="none" stroke={colors[0]} strokeWidth="3" strokeLinejoin="miter" strokeLinecap="butt" />
+      <polyline points={pointsString(offsetPolyline(points, 2.2))} fill="none" stroke={colors[1]} strokeWidth="3" strokeLinejoin="miter" strokeLinecap="butt" />
     </g>
   );
 }
 
-function gateTextColor(source: GateSource) {
-  if (source === "design") return "#d94a43";
-  if (source === "personality") return "#24212d";
-  if (source === "both") return "#7f2d37";
-  return "#77736d";
+function renderCenter(center: CenterId, defined: boolean) {
+  const shape = CENTER_SHAPES[center];
+  const fill = defined ? CENTER_FILL[center] : "#ffffff";
+  const common = { fill, stroke: "#191820", strokeWidth: 2.3 };
+  if (shape.kind === "rect") return <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx={shape.rx} {...common} />;
+  return <polygon points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")} {...common} />;
 }
 
-function ActivationPanel({
-  x,
-  title,
-  color,
-  activations,
-  align,
-}: {
-  x: number;
-  title: string;
-  color: string;
-  activations: HumanDesignActivation[];
-  align: "left" | "right";
-}) {
-  const rowH = 32;
-  const startY = 95;
+function centerAnchor(center: CenterId): Point {
+  return CENTER_LABELS[center];
+}
 
+function gateLabelPoint(gate: number): Point {
+  const port = GATE_PORTS[gate];
+  const center = GATE_CENTER.get(gate);
+  if (!center) return port;
+  const target = centerAnchor(center);
+  const dx = target.x - port.x;
+  const dy = target.y - port.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const inset = 7;
+  return { x: port.x + (dx / len) * inset, y: port.y + (dy / len) * inset };
+}
+
+function gateTextColor(source: GateSource) {
+  if (source === "design") return "#d84238";
+  if (source === "personality") return "#191820";
+  if (source === "both") return "#6f2330";
+  return "#3f3d39";
+}
+
+function ActivationPanel({ x, title, color, activations, align }: { x: number; title: string; color: string; activations: HumanDesignActivation[]; align: "left" | "right" }) {
+  const rowH = 30;
+  const startY = 80;
   return (
     <g>
-      <text x={x} y="55" textAnchor={align === "left" ? "start" : "end"} fontSize="18" fontWeight="800" fill={color}>
-        {title}
-      </text>
+      <text x={x} y="48" textAnchor={align === "left" ? "start" : "end"} fontSize="17" fontWeight="800" fill={color}>{title}</text>
       {activations.map((a, i) => {
         const y = startY + i * rowH;
         return (
           <g key={`${title}-${a.body}`}>
-            <text x={x} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="20" fontWeight="700" fill={color}>
-              {BODY_SYMBOL[a.body] ?? "•"}
-            </text>
-            <text
-              x={x + (align === "left" ? 28 : -28)}
-              y={y}
-              textAnchor={align === "left" ? "start" : "end"}
-              fontSize="15"
-              fontWeight="700"
-              fill="#252433"
-            >
-              {a.gate}.{a.line}
-            </text>
+            <text x={x} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="18" fontWeight="700" fill={color}>{BODY_SYMBOL[a.body] ?? "•"}</text>
+            <text x={x + (align === "left" ? 25 : -25)} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="14" fontWeight="700" fill="#252433">{a.gate}.{a.line}</text>
           </g>
         );
       })}
@@ -370,47 +358,37 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
   const designGates = new Set(designActivations.map((a) => a.gate));
 
   return (
-    <svg viewBox="0 0 900 850" width={width} role="img" aria-label="Human Design BodyGraph">
-      <rect x="0" y="0" width="900" height="850" rx="28" fill="#fbfaf7" />
-      <ActivationPanel x={38} title="Design" color="#d94a43" activations={designActivations} align="left" />
-      <ActivationPanel x={862} title="Personality" color="#24212d" activations={personalityActivations} align="right" />
+    <svg viewBox="0 0 900 720" width="100%" style={{ maxWidth: width, height: "auto" }} role="img" aria-label="Human Design BodyGraph">
+      <rect x="0" y="0" width="900" height="720" rx="24" fill="#fbfaf7" />
+      <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left" />
+      <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right" />
 
-      {/* Channel layer: all endpoints are exact gate ports derived from the center boundary. */}
+      {/* Traditional-style channel rails: dark outer rail + white inner corridor. */}
       <g>
         {CHANNELS.map((channel) => {
+          const route = routeFor(channel.gateA, channel.gateB);
           const id = canonicalChannelId(channel.gateA, channel.gateB);
-          const a = GATE_PORTS[channel.gateA];
-          const b = GATE_PORTS[channel.gateB];
-          if (!a || !b) return null;
-
           const complete = activeChannels.has(id);
           const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
           const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
-          const mid = lerp(a, b, 0.5);
-          const stubA = lerp(a, b, 0.30);
-          const stubB = lerp(b, a, 0.30);
+          const firstHalf = sliceRoute(route, 0, 0.5);
+          const secondHalf = sliceRoute(route, 0.5, 1);
+          const hangingA = sliceRoute(route, 0, 0.42);
+          const hangingB = sliceRoute(route, 0.58, 1);
 
           return (
             <g key={id}>
-              <line
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                stroke="#c7c3bb"
-                strokeWidth="2.8"
-                strokeOpacity="0.82"
-                strokeLinecap="butt"
-              />
+              <polyline points={pointsString(route)} fill="none" stroke="#8f8b84" strokeWidth="10" strokeLinejoin="miter" strokeLinecap="butt" opacity="0.78" />
+              <polyline points={pointsString(route)} fill="none" stroke="#ffffff" strokeWidth="6.2" strokeLinejoin="miter" strokeLinecap="butt" />
               {complete ? (
                 <>
-                  {sourceA !== "inactive" && <StraightSegment a={a} b={mid} source={sourceA} width={7.0} />}
-                  {sourceB !== "inactive" && <StraightSegment a={b} b={mid} source={sourceB} width={7.0} />}
+                  {sourceA !== "inactive" && <ColoredRail points={firstHalf} source={sourceA} />}
+                  {sourceB !== "inactive" && <ColoredRail points={secondHalf} source={sourceB} />}
                 </>
               ) : (
                 <>
-                  {sourceA !== "inactive" && <StraightSegment a={a} b={stubA} source={sourceA} width={6.4} />}
-                  {sourceB !== "inactive" && <StraightSegment a={b} b={stubB} source={sourceB} width={6.4} />}
+                  {sourceA !== "inactive" && <ColoredRail points={hangingA} source={sourceA} />}
+                  {sourceB !== "inactive" && <ColoredRail points={hangingB} source={sourceB} />}
                 </>
               )}
             </g>
@@ -418,49 +396,34 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
         })}
       </g>
 
-      {/* Center layer */}
-      {(Object.keys(CENTER_SHAPES) as CenterId[]).map((center) => (
-        <g key={center}>
-          {renderCenter(center, defined.has(center))}
-          <text
-            x={CENTER_LABELS[center].x}
-            y={CENTER_LABELS[center].y + 5}
-            textAnchor="middle"
-            fontSize="14"
-            fontWeight="800"
-            fill="#252433"
-          >
-            {center === "Solar Plexus" ? "Solar" : center}
-          </text>
-        </g>
-      ))}
-
-      {/* Gate labels are centered ON the exact boundary port. */}
       <g>
-        {Object.entries(GATE_PORTS).map(([gateString, port]) => {
+        {(Object.keys(CENTER_SHAPES) as CenterId[]).map((center) => (
+          <g key={center}>
+            {renderCenter(center, defined.has(center))}
+            <text x={CENTER_LABELS[center].x} y={CENTER_LABELS[center].y + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="#191820">
+              {center === "Solar Plexus" ? "Solar" : center}
+            </text>
+          </g>
+        ))}
+      </g>
+
+      {/* Gate numbers are inset just inside their own center border, matching the chart instead of floating in space. */}
+      <g>
+        {Object.keys(GATE_PORTS).map((gateString) => {
           const gate = Number(gateString);
+          const p = gateLabelPoint(gate);
           const source = sourceForGate(gate, personalityGates, designGates);
           return (
-            <g key={`gate-${gate}`}>
-              <circle cx={port.x} cy={port.y} r="8.5" fill="#fbfaf7" stroke="#e5e0d7" strokeWidth="0.8" />
-              <text
-                x={port.x}
-                y={port.y + 3.2}
-                textAnchor="middle"
-                fontSize="9.4"
-                fontWeight="900"
-                fill={gateTextColor(source)}
-              >
-                {gate}
-              </text>
-            </g>
+            <text key={`gate-${gate}`} x={p.x} y={p.y + 3} textAnchor="middle" fontSize="8.8" fontWeight="900" fill={gateTextColor(source)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="2.4" strokeLinejoin="round">
+              {gate}
+            </text>
           );
         })}
       </g>
 
-      <g transform="translate(450 826)">
-        <rect x="-250" y="-24" width="500" height="34" rx="17" fill="#ffffff" stroke="#e3dfd7" />
-        <text x="0" y="-2" textAnchor="middle" fontSize="14" fontWeight="700" fill="#5f5a54">
+      <g transform="translate(450 696)">
+        <rect x="-235" y="-23" width="470" height="32" rx="16" fill="#ffffff" stroke="#ddd8cf" />
+        <text x="0" y="-2" textAnchor="middle" fontSize="13" fontWeight="700" fill="#5a5650">
           {chart.type} · {chart.authority} · {chart.profile} · {chart.definition}
         </text>
       </g>
