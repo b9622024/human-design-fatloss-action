@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "R3.0";
+export const BODYGRAPH_RENDERER_VERSION = "R4.0";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -18,6 +18,8 @@ type Shape =
   | { kind: "polygon"; points: Point[] }
   | { kind: "rect"; x: number; y: number; width: number; height: number; rx: number };
 
+type ChannelGeometry = { a: Point; b: Point };
+
 const CENTER_FILL: Record<CenterId, string> = {
   Head: "#f4df6b",
   Ajna: "#8dbca8",
@@ -31,35 +33,35 @@ const CENTER_FILL: Record<CenterId, string> = {
 };
 
 /*
- * R3.0 is intentionally a hard reset of the drawing layer.
- * Nothing below is derived from the old V11-R2.1 interpolation model.
- * The nine centers, sixty-four gate labels and thirty-six channel endpoints
- * share one fixed reference scaffold.  The proportions follow the supplied
- * MAIA/Jovian-style reference: compact center column, close Ego, and side
- * triangles that flank Sacral instead of sitting at the page edges.
+ * R4.0 architecture
+ * -----------------
+ * Gate labels and channel endpoints are intentionally decoupled.
+ * The label can sit exactly on the visible center boundary while the channel
+ * endpoint can occupy its own lane.  This prevents dense labels from forcing
+ * channels into the same pixel coordinates.
  */
 const CENTER_SHAPES: Record<CenterId, Shape> = {
-  Head: { kind: "polygon", points: [{ x: 450, y: 48 }, { x: 407, y: 124 }, { x: 493, y: 124 }] },
-  Ajna: { kind: "polygon", points: [{ x: 407, y: 150 }, { x: 493, y: 150 }, { x: 450, y: 224 }] },
-  Throat: { kind: "rect", x: 407, y: 255, width: 86, height: 82, rx: 4 },
-  G: { kind: "polygon", points: [{ x: 450, y: 362 }, { x: 495, y: 405 }, { x: 450, y: 450 }, { x: 405, y: 405 }] },
-  Ego: { kind: "polygon", points: [{ x: 520, y: 382 }, { x: 503, y: 438 }, { x: 555, y: 438 }] },
-  Spleen: { kind: "polygon", points: [{ x: 260, y: 478 }, { x: 382, y: 535 }, { x: 260, y: 596 }] },
-  "Solar Plexus": { kind: "polygon", points: [{ x: 640, y: 478 }, { x: 518, y: 535 }, { x: 640, y: 596 }] },
-  Sacral: { kind: "rect", x: 410, y: 510, width: 80, height: 90, rx: 4 },
-  Root: { kind: "rect", x: 402, y: 680, width: 96, height: 100, rx: 4 },
+  Head: { kind: "polygon", points: [{ x: 450, y: 54 }, { x: 408, y: 126 }, { x: 492, y: 126 }] },
+  Ajna: { kind: "polygon", points: [{ x: 408, y: 150 }, { x: 492, y: 150 }, { x: 450, y: 220 }] },
+  Throat: { kind: "rect", x: 408, y: 252, width: 84, height: 82, rx: 4 },
+  G: { kind: "polygon", points: [{ x: 450, y: 358 }, { x: 493, y: 400 }, { x: 450, y: 444 }, { x: 407, y: 400 }] },
+  Ego: { kind: "polygon", points: [{ x: 512, y: 374 }, { x: 497, y: 430 }, { x: 548, y: 430 }] },
+  Spleen: { kind: "polygon", points: [{ x: 310, y: 500 }, { x: 397, y: 553 }, { x: 310, y: 606 }] },
+  "Solar Plexus": { kind: "polygon", points: [{ x: 590, y: 500 }, { x: 503, y: 553 }, { x: 590, y: 606 }] },
+  Sacral: { kind: "rect", x: 409, y: 518, width: 82, height: 90, rx: 4 },
+  Root: { kind: "rect", x: 400, y: 680, width: 100, height: 104, rx: 4 },
 };
 
 const CENTER_LABELS: Record<CenterId, Point> = {
-  Head: { x: 450, y: 88 },
+  Head: { x: 450, y: 90 },
   Ajna: { x: 450, y: 184 },
-  Throat: { x: 450, y: 296 },
-  G: { x: 450, y: 409 },
-  Ego: { x: 529, y: 416 },
-  Spleen: { x: 310, y: 538 },
-  "Solar Plexus": { x: 590, y: 538 },
-  Sacral: { x: 450, y: 557 },
-  Root: { x: 450, y: 735 },
+  Throat: { x: 450, y: 294 },
+  G: { x: 450, y: 404 },
+  Ego: { x: 522, y: 408 },
+  Spleen: { x: 344, y: 557 },
+  "Solar Plexus": { x: 556, y: 557 },
+  Sacral: { x: 450, y: 563 },
+  Root: { x: 450, y: 738 },
 };
 
 const BODY_SYMBOL: Record<string, string> = {
@@ -68,62 +70,94 @@ const BODY_SYMBOL: Record<string, string> = {
   Uranus: "♅", Neptune: "♆", Pluto: "♇",
 };
 
-/*
- * Canonical gate anchors.
- * Labels are placed on the visible center boundary and every channel uses
- * exactly the same anchor.  Dense runs are ordered to match the reference,
- * especially Spleen 48/57/44/50, Solar 36/22/37/6 and Root top gates.
- */
-const GATE_PORTS: Record<number, Point> = {
-  // Head / Ajna
-  64: { x: 422, y: 124 }, 61: { x: 450, y: 124 }, 63: { x: 478, y: 124 },
+/* Visible gate label positions only. */
+const GATE_LABEL_POSITIONS: Record<number, Point> = {
+  64: { x: 422, y: 126 }, 61: { x: 450, y: 126 }, 63: { x: 478, y: 126 },
   47: { x: 422, y: 150 }, 24: { x: 450, y: 150 }, 4: { x: 478, y: 150 },
-  17: { x: 420, y: 202 }, 43: { x: 450, y: 224 }, 11: { x: 480, y: 202 },
+  17: { x: 421, y: 200 }, 43: { x: 450, y: 220 }, 11: { x: 479, y: 200 },
 
-  // Throat
-  62: { x: 424, y: 255 }, 23: { x: 450, y: 255 }, 56: { x: 476, y: 255 },
-  16: { x: 407, y: 272 }, 20: { x: 407, y: 311 },
-  45: { x: 493, y: 270 }, 12: { x: 493, y: 294 }, 35: { x: 493, y: 319 },
-  31: { x: 424, y: 337 }, 8: { x: 450, y: 337 }, 33: { x: 476, y: 337 },
+  62: { x: 424, y: 252 }, 23: { x: 450, y: 252 }, 56: { x: 476, y: 252 },
+  16: { x: 408, y: 270 }, 20: { x: 408, y: 309 },
+  45: { x: 492, y: 269 }, 12: { x: 492, y: 293 }, 35: { x: 492, y: 318 },
+  31: { x: 424, y: 334 }, 8: { x: 450, y: 334 }, 33: { x: 476, y: 334 },
 
-  // G center
-  7: { x: 450, y: 362 },
-  1: { x: 426, y: 384 }, 13: { x: 474, y: 384 },
-  10: { x: 405, y: 405 }, 25: { x: 495, y: 405 },
-  2: { x: 426, y: 428 }, 46: { x: 474, y: 428 },
-  15: { x: 450, y: 450 },
+  7: { x: 450, y: 358 }, 1: { x: 426, y: 381 }, 13: { x: 474, y: 381 },
+  10: { x: 407, y: 400 }, 25: { x: 493, y: 400 },
+  2: { x: 426, y: 423 }, 46: { x: 474, y: 423 }, 15: { x: 450, y: 444 },
 
-  // Ego
-  21: { x: 516, y: 396 }, 51: { x: 507, y: 422 },
-  26: { x: 515, y: 438 }, 40: { x: 544, y: 438 },
+  21: { x: 510, y: 387 }, 51: { x: 500, y: 414 }, 26: { x: 512, y: 430 }, 40: { x: 540, y: 430 },
 
-  // Spleen: top-to-bottom on inner/right boundary, then lower edge outward.
-  48: { x: 360, y: 525 },
-  57: { x: 371, y: 531 },
-  44: { x: 371, y: 541 },
-  50: { x: 360, y: 549 },
-  32: { x: 337, y: 559 },
-  18: { x: 300, y: 577 },
-  28: { x: 266, y: 593 },
+  // Spleen labels: deliberately spaced on the triangle edge, matching the reference order.
+  48: { x: 388, y: 548 }, 57: { x: 379, y: 554 }, 44: { x: 370, y: 560 },
+  50: { x: 360, y: 566 }, 32: { x: 346, y: 576 }, 18: { x: 328, y: 588 }, 28: { x: 313, y: 602 },
 
-  // Solar Plexus: mirrored reference order on inner/left boundary.
-  36: { x: 540, y: 525 },
-  22: { x: 529, y: 531 },
-  37: { x: 529, y: 541 },
-  6: { x: 540, y: 549 },
-  49: { x: 563, y: 559 },
-  55: { x: 600, y: 577 },
-  30: { x: 634, y: 593 },
+  // Solar labels mirror Spleen and stay on their own triangle edge.
+  36: { x: 512, y: 548 }, 22: { x: 521, y: 554 }, 37: { x: 530, y: 560 },
+  6: { x: 540, y: 566 }, 49: { x: 554, y: 576 }, 55: { x: 572, y: 588 }, 30: { x: 587, y: 602 },
 
-  // Sacral
-  5: { x: 426, y: 510 }, 14: { x: 450, y: 510 }, 29: { x: 474, y: 510 },
-  34: { x: 410, y: 531 }, 27: { x: 410, y: 555 }, 59: { x: 410, y: 579 },
-  3: { x: 426, y: 600 }, 9: { x: 450, y: 600 }, 42: { x: 474, y: 600 },
+  5: { x: 426, y: 518 }, 14: { x: 450, y: 518 }, 29: { x: 474, y: 518 },
+  34: { x: 409, y: 539 }, 27: { x: 409, y: 563 }, 59: { x: 409, y: 587 },
+  3: { x: 426, y: 608 }, 9: { x: 450, y: 608 }, 42: { x: 474, y: 608 },
 
-  // Root: seven gates distributed clearly along the top edge, then 39/41 right.
-  54: { x: 410, y: 680 }, 58: { x: 423, y: 680 }, 38: { x: 436, y: 680 },
-  60: { x: 450, y: 680 }, 52: { x: 464, y: 680 }, 53: { x: 477, y: 680 }, 19: { x: 490, y: 680 },
-  39: { x: 498, y: 716 }, 41: { x: 498, y: 758 },
+  // Root labels: evenly distributed and readable on the top boundary.
+  54: { x: 407, y: 680 }, 58: { x: 421, y: 680 }, 38: { x: 435, y: 680 },
+  60: { x: 450, y: 680 }, 52: { x: 465, y: 680 }, 53: { x: 479, y: 680 }, 19: { x: 493, y: 680 },
+  39: { x: 500, y: 718 }, 41: { x: 500, y: 760 },
+};
+
+/*
+ * Channel-only endpoint geometry.
+ * These are NOT the label coordinates. Each channel owns a separate straight
+ * lane, which is the key architectural change in R4.0.
+ */
+const CHANNEL_GEOMETRY: Record<string, ChannelGeometry> = {
+  "47-64": { a: { x: 424, y: 126 }, b: { x: 424, y: 150 } },
+  "24-61": { a: { x: 450, y: 126 }, b: { x: 450, y: 150 } },
+  "4-63": { a: { x: 476, y: 126 }, b: { x: 476, y: 150 } },
+
+  "17-62": { a: { x: 420, y: 200 }, b: { x: 424, y: 252 } },
+  "23-43": { a: { x: 450, y: 220 }, b: { x: 450, y: 252 } },
+  "11-56": { a: { x: 480, y: 200 }, b: { x: 476, y: 252 } },
+
+  "16-48": { a: { x: 408, y: 272 }, b: { x: 386, y: 546 } },
+  "20-57": { a: { x: 408, y: 301 }, b: { x: 378, y: 552 } },
+  "10-20": { a: { x: 408, y: 314 }, b: { x: 409, y: 398 } },
+  "20-34": { a: { x: 411, y: 314 }, b: { x: 412, y: 539 } },
+  "12-22": { a: { x: 492, y: 292 }, b: { x: 522, y: 552 } },
+  "35-36": { a: { x: 492, y: 319 }, b: { x: 514, y: 546 } },
+  "21-45": { a: { x: 492, y: 270 }, b: { x: 510, y: 387 } },
+
+  "7-31": { a: { x: 424, y: 334 }, b: { x: 446, y: 358 } },
+  "1-8": { a: { x: 450, y: 334 }, b: { x: 428, y: 381 } },
+  "13-33": { a: { x: 476, y: 334 }, b: { x: 472, y: 381 } },
+
+  "2-14": { a: { x: 426, y: 423 }, b: { x: 445, y: 518 } },
+  "5-15": { a: { x: 450, y: 444 }, b: { x: 430, y: 518 } },
+  "29-46": { a: { x: 474, y: 423 }, b: { x: 474, y: 518 } },
+  "10-34": { a: { x: 409, y: 400 }, b: { x: 412, y: 541 } },
+  "34-57": { a: { x: 412, y: 541 }, b: { x: 378, y: 554 } },
+  "27-50": { a: { x: 412, y: 563 }, b: { x: 360, y: 566 } },
+
+  // Left lower lanes: ordered left-to-right to avoid crossing each other.
+  "32-54": { a: { x: 346, y: 576 }, b: { x: 407, y: 680 } },
+  "18-58": { a: { x: 328, y: 588 }, b: { x: 421, y: 680 } },
+  "28-38": { a: { x: 313, y: 602 }, b: { x: 435, y: 680 } },
+
+  // Central lower lanes are parallel.
+  "3-60": { a: { x: 426, y: 608 }, b: { x: 450, y: 680 } },
+  "9-52": { a: { x: 450, y: 608 }, b: { x: 465, y: 680 } },
+  "42-53": { a: { x: 474, y: 608 }, b: { x: 479, y: 680 } },
+
+  // Right lower lanes mirror the left side.
+  "19-49": { a: { x: 493, y: 680 }, b: { x: 554, y: 576 } },
+  "39-55": { a: { x: 500, y: 718 }, b: { x: 572, y: 588 } },
+  "30-41": { a: { x: 500, y: 760 }, b: { x: 587, y: 602 } },
+
+  "25-51": { a: { x: 493, y: 400 }, b: { x: 500, y: 414 } },
+  "26-44": { a: { x: 512, y: 430 }, b: { x: 370, y: 560 } },
+  "37-40": { a: { x: 540, y: 430 }, b: { x: 530, y: 560 } },
+  "10-57": { a: { x: 407, y: 400 }, b: { x: 379, y: 554 } },
+  "6-59": { a: { x: 409, y: 587 }, b: { x: 540, y: 566 } },
 };
 
 function canonicalChannelId(a: number, b: number) {
@@ -139,12 +173,12 @@ function sourceForGate(gate: number, personality: Set<number>, design: Set<numbe
   return "inactive";
 }
 
-function lerp(a: Point, b: Point, t: number): Point {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+function midpoint(a: Point, b: Point): Point {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
-function midpoint(a: Point, b: Point): Point {
-  return lerp(a, b, 0.5);
+function lerp(a: Point, b: Point, t: number): Point {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
 function offsetSegment(a: Point, b: Point, offset: number): [Point, Point] {
@@ -159,16 +193,16 @@ function offsetSegment(a: Point, b: Point, offset: number): [Point, Point] {
 function ColoredLine({ a, b, source }: { a: Point; b: Point; source: GateSource }) {
   if (source === "inactive") return null;
   if (source === "personality") {
-    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#15151d" strokeWidth="5.8" strokeLinecap="butt" />;
+    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#15151d" strokeWidth="6" strokeLinecap="butt" />;
   }
   if (source === "design") {
-    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#d94a40" strokeWidth="5.8" strokeLinecap="butt" />;
+    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#d94a40" strokeWidth="6" strokeLinecap="butt" />;
   }
-  const [a1, b1] = offsetSegment(a, b, -1.8);
-  const [a2, b2] = offsetSegment(a, b, 1.8);
+  const [a1, b1] = offsetSegment(a, b, -1.7);
+  const [a2, b2] = offsetSegment(a, b, 1.7);
   return <g>
-    <line x1={a1.x} y1={a1.y} x2={b1.x} y2={b1.y} stroke="#15151d" strokeWidth="2.8" strokeLinecap="butt" />
-    <line x1={a2.x} y1={a2.y} x2={b2.x} y2={b2.y} stroke="#d94a40" strokeWidth="2.8" strokeLinecap="butt" />
+    <line x1={a1.x} y1={a1.y} x2={b1.x} y2={b1.y} stroke="#15151d" strokeWidth="3" strokeLinecap="butt" />
+    <line x1={a2.x} y1={a2.y} x2={b2.x} y2={b2.y} stroke="#d94a40" strokeWidth="3" strokeLinecap="butt" />
   </g>;
 }
 
@@ -190,11 +224,11 @@ function gateTextColor(source: GateSource) {
 }
 
 function GateBadge({ gate, source }: { gate: number; source: GateSource }) {
-  const p = GATE_PORTS[gate];
+  const p = GATE_LABEL_POSITIONS[gate];
   if (!p) return null;
   return <g>
-    <circle cx={p.x} cy={p.y} r="6.4" fill="#fbfaf7" opacity="0.98" />
-    <text x={p.x} y={p.y + 3} textAnchor="middle" fontSize="8.5" fontWeight="900" fill={gateTextColor(source)}>{gate}</text>
+    <circle cx={p.x} cy={p.y} r="6.1" fill="#fbfaf7" opacity="0.98" />
+    <text x={p.x} y={p.y + 3} textAnchor="middle" fontSize="8.2" fontWeight="900" fill={gateTextColor(source)}>{gate}</text>
   </g>;
 }
 
@@ -224,44 +258,40 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
     <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left" />
     <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right" />
 
-    {/* Background channel rails.  R3.0 deliberately restores visible rails;
-        they are light gray but no longer disappear on mobile screens. */}
+    {/* Background rails are intentionally visible. Every channel gets its own endpoint lane. */}
     <g>
       {CHANNELS.map((channel) => {
-        const a = GATE_PORTS[channel.gateA];
-        const b = GATE_PORTS[channel.gateB];
-        if (!a || !b) return null;
         const id = canonicalChannelId(channel.gateA, channel.gateB);
-        return <line key={`rail-${id}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#aaa69f" strokeWidth="2" opacity="0.72" />;
+        const geometry = CHANNEL_GEOMETRY[id];
+        if (!geometry) return null;
+        return <line key={`rail-${id}`} x1={geometry.a.x} y1={geometry.a.y} x2={geometry.b.x} y2={geometry.b.y} stroke="#8d8982" strokeWidth="2.25" opacity="0.62" />;
       })}
     </g>
 
-    {/* Active channels sit above the rails. Complete channels meet at midpoint;
-        hanging gates intentionally stop early so they remain visually distinct. */}
+    {/* Active channels use their own independent geometry; labels never influence routing. */}
     <g>
       {CHANNELS.map((channel) => {
-        const a = GATE_PORTS[channel.gateA];
-        const b = GATE_PORTS[channel.gateB];
-        if (!a || !b) return null;
         const id = canonicalChannelId(channel.gateA, channel.gateB);
+        const geometry = CHANNEL_GEOMETRY[id];
+        if (!geometry) return null;
         const complete = activeChannels.has(id);
         const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
         const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
         if (complete) {
-          const mid = midpoint(a, b);
+          const mid = midpoint(geometry.a, geometry.b);
           return <g key={`active-${id}`}>
-            <ColoredLine a={a} b={mid} source={sourceA} />
-            <ColoredLine a={b} b={mid} source={sourceB} />
+            <ColoredLine a={geometry.a} b={mid} source={sourceA} />
+            <ColoredLine a={geometry.b} b={mid} source={sourceB} />
           </g>;
         }
         return <g key={`active-${id}`}>
-          <ColoredLine a={a} b={lerp(a, b, 0.25)} source={sourceA} />
-          <ColoredLine a={b} b={lerp(b, a, 0.25)} source={sourceB} />
+          <ColoredLine a={geometry.a} b={lerp(geometry.a, geometry.b, 0.24)} source={sourceA} />
+          <ColoredLine a={geometry.b} b={lerp(geometry.b, geometry.a, 0.24)} source={sourceB} />
         </g>;
       })}
     </g>
 
-    {/* Centers cover line interiors; gate labels render last and therefore remain legible. */}
+    {/* Centers cover channel interiors. */}
     <g>
       {(Object.keys(CENTER_SHAPES) as CenterId[]).map((center) => <g key={center}>
         {renderCenter(center, defined.has(center))}
@@ -269,11 +299,11 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
       </g>)}
     </g>
 
+    {/* Gate labels render last and use their own boundary coordinates. */}
     <g>
-      {Object.keys(GATE_PORTS).map((gateString) => {
+      {Object.keys(GATE_LABEL_POSITIONS).map((gateString) => {
         const gate = Number(gateString);
-        const source = sourceForGate(gate, personalityGates, designGates);
-        return <GateBadge key={`gate-${gate}`} gate={gate} source={source} />;
+        return <GateBadge key={`gate-${gate}`} gate={gate} source={sourceForGate(gate, personalityGates, designGates)} />;
       })}
     </g>
 
