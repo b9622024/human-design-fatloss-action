@@ -79,6 +79,12 @@ function uniqueSortedStrings(values: string[]) {
   return [...new Set(values)].sort();
 }
 
+function canonicalChannelId(channel: ChannelDefinition): string {
+  const first = Math.min(channel.gateA, channel.gateB);
+  const second = Math.max(channel.gateA, channel.gateB);
+  return `${first}-${second}`;
+}
+
 function buildCenterAdjacency(channels: ChannelDefinition[]) {
   const adjacency = new Map<CenterId, Set<CenterId>>();
   for (const center of ALL_CENTERS) adjacency.set(center, new Set());
@@ -188,7 +194,10 @@ export function buildCoreHumanDesignChart(personality: HumanDesignActivation[], 
 
   return {
     activeGates,
-    channels: uniqueSortedStrings(definedChannels.map((channel) => channel.id)),
+    // Canonical output format is always lowerGate-higherGate (e.g. 1-8,
+    // 10-20, 47-64). Internal channel topology does not depend on ordering,
+    // but stable IDs are required for Golden Test comparisons and renderers.
+    channels: uniqueSortedStrings(definedChannels.map(canonicalChannelId)),
     centers: [...centers].sort(),
     definition: computeDefinition(components),
     type,
