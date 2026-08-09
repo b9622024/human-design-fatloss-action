@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.0";
+export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.1";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -31,18 +31,20 @@ const CENTER_FILL:Record<CenterId,string> = {
 };
 
 /*
- * CANONICAL-SLOTS 1.0
+ * CANONICAL-SLOTS 1.1
  * -------------------
- * Geometry is now defined from the Human Design center topology first.
- * Gates are placed on canonical center edges, not visually guessed around tips.
- * Channels are always straight gate-to-gate lines. No curve, waypoint or router.
+ * Fixed center geometry + fixed boundary gate slots.
+ * The two lower triangles intentionally concentrate their connection gates
+ * around the inward-facing apex, matching the reference BodyGraph topology.
+ * Root side-gate ordering mirrors the corresponding Spleen/Solar families so
+ * the long lower channels remain parallel instead of crossing one another.
  */
 const SHAPES:Record<CenterId,Shape> = {
   Head:{kind:"polygon",points:[{x:450,y:42},{x:408,y:112},{x:492,y:112}]},
   Ajna:{kind:"polygon",points:[{x:408,y:138},{x:492,y:138},{x:450,y:208}]},
   Throat:{kind:"rect",x:407,y:244,width:86,height:82,rx:4},
   G:{kind:"polygon",points:[{x:450,y:352},{x:492,y:394},{x:450,y:436},{x:408,y:394}]},
-  Ego:{kind:"polygon",points:[{x:530,y:352},{x:508,y:414},{x:566,y:414}]},
+  Ego:{kind:"polygon",points:[{x:516,y:354},{x:500,y:412},{x:550,y:412}]},
   Spleen:{kind:"polygon",points:[{x:250,y:438},{x:390,y:510},{x:250,y:582}]},
   "Solar Plexus":{kind:"polygon",points:[{x:650,y:438},{x:510,y:510},{x:650,y:582}]},
   Sacral:{kind:"rect",x:408,y:492,width:84,height:88,rx:4},
@@ -51,15 +53,15 @@ const SHAPES:Record<CenterId,Shape> = {
 
 const CENTER_LABEL:Record<CenterId,Point> = {
   Head:{x:450,y:80}, Ajna:{x:450,y:174}, Throat:{x:450,y:286}, G:{x:450,y:399},
-  Ego:{x:536,y:392}, Spleen:{x:306,y:517}, "Solar Plexus":{x:594,y:517},
+  Ego:{x:524,y:392}, Spleen:{x:306,y:517}, "Solar Plexus":{x:594,y:517},
   Sacral:{x:450,y:540}, Root:{x:450,y:697},
 };
 
 const GATE:Record<number,Point> = {
-  /* Head bottom */
+  /* Head */
   64:{x:424,y:112}, 61:{x:450,y:112}, 63:{x:476,y:112},
 
-  /* Ajna top + side + tip */
+  /* Ajna */
   47:{x:424,y:138}, 24:{x:450,y:138}, 4:{x:476,y:138},
   17:{x:416,y:153}, 11:{x:484,y:153}, 43:{x:450,y:208},
 
@@ -74,24 +76,24 @@ const GATE:Record<number,Point> = {
   10:{x:408,y:394}, 25:{x:492,y:394},
   2:{x:423,y:421}, 46:{x:477,y:421}, 15:{x:450,y:436},
 
-  /* Ego triangle */
-  21:{x:530,y:352}, 51:{x:515,y:394}, 26:{x:518,y:414}, 40:{x:556,y:414},
+  /* Ego, pulled inward to match the compact reference placement */
+  21:{x:516,y:354}, 51:{x:505,y:394}, 26:{x:507,y:412}, 40:{x:542,y:412},
 
-  /* Spleen triangle: gates distributed along BOTH sloping edges */
-  48:{x:278,y:452}, 57:{x:318,y:473}, 44:{x:358,y:494},
-  50:{x:370,y:520}, 32:{x:336,y:538}, 18:{x:298,y:558}, 28:{x:260,y:577},
+  /* Spleen: upper-family gates cluster toward the inward apex. */
+  48:{x:342,y:485}, 57:{x:360,y:494}, 44:{x:378,y:504},
+  50:{x:372,y:519}, 32:{x:332,y:540}, 18:{x:296,y:559}, 28:{x:260,y:577},
 
-  /* Solar Plexus triangle: mirrored canonical distribution */
-  36:{x:622,y:452}, 22:{x:582,y:473}, 37:{x:542,y:494},
-  6:{x:530,y:520}, 49:{x:564,y:538}, 55:{x:602,y:558}, 30:{x:640,y:577},
+  /* Solar Plexus: exact mirror of Spleen. */
+  36:{x:558,y:485}, 22:{x:540,y:494}, 37:{x:522,y:504},
+  6:{x:528,y:519}, 49:{x:568,y:540}, 55:{x:604,y:559}, 30:{x:640,y:577},
 
   /* Sacral */
   5:{x:426,y:492}, 14:{x:450,y:492}, 29:{x:474,y:492},
   34:{x:408,y:510}, 27:{x:408,y:536}, 59:{x:408,y:562},
   3:{x:426,y:580}, 9:{x:450,y:580}, 42:{x:474,y:580},
 
-  /* Root: canonical placement — left side / top / right side */
-  54:{x:397,y:666}, 38:{x:397,y:688}, 58:{x:397,y:711},
+  /* Root: left side order follows Spleen pair order 32→54, 18→58, 28→38. */
+  54:{x:397,y:666}, 58:{x:397,y:688}, 38:{x:397,y:711},
   53:{x:424,y:646}, 60:{x:450,y:646}, 52:{x:476,y:646},
   19:{x:503,y:666}, 39:{x:503,y:688}, 41:{x:503,y:711},
 };
@@ -135,7 +137,7 @@ function ChannelActivation({a,b,aSource,bSource,active}:{a:Point;b:Point;aSource
   const aEnd=lerp(a,b,.24), bStart=lerp(a,b,.76);
   return <g>
     {aSource!=="inactive"&&<line x1={a.x} y1={a.y} x2={aEnd.x} y2={aEnd.y} stroke={sourceColor(aSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
-    {bSource!=="inactive"&&<line x1={bStart.x} y1={bStart.y} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
+    {bSource!=="inactive"&&<line x1={bStart.x} y1={b.y} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
   </g>;
 }
 
@@ -160,20 +162,18 @@ export function BodyGraph({chart,personalityActivations=[],designActivations=[],
     <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left"/>
     <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right"/>
 
-    {/* Thin inactive rails. White halo keeps overlapping rails visually separated. */}
+    {/* Darker rails improve readability while the white halo separates overlaps. */}
     <g>
       {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);return <g key={`rail-${id}`}>
-        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fbfaf7" strokeWidth="4.4"/>
-        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#aaa79f" strokeWidth="1.35" opacity="0.76"/>
+        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fbfaf7" strokeWidth="4.8"/>
+        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#8e8a83" strokeWidth="1.55" opacity="0.88"/>
       </g>;})}
     </g>
 
-    {/* Active and hanging segments remain straight gate-to-gate. */}
     <g>
       {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);return <ChannelActivation key={`act-${id}`} a={a} b={b} aSource={gateSource(c.gateA,personality,design)} bSource={gateSource(c.gateB,personality,design)} active={activeChannels.has(id)}/>;})}
     </g>
 
-    {/* Centers mask lines in their interior. */}
     <g>
       {(Object.keys(SHAPES) as CenterId[]).map(center=><g key={center}>
         {renderCenter(center,defined.has(center))}
@@ -181,7 +181,6 @@ export function BodyGraph({chart,personalityActivations=[],designActivations=[],
       </g>)}
     </g>
 
-    {/* Gate labels last: every label sits exactly on its center boundary slot. */}
     <g>{Object.keys(GATE).map(g=>{const gate=Number(g);return <GateLabel key={gate} gate={gate} source={gateSource(gate,personality,design)}/>;})}</g>
 
     <g transform="translate(450 750)">
