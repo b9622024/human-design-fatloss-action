@@ -50,7 +50,7 @@ export default function HumanDesignTestPage() {
       <section className="hero-card">
         <div className="eyebrow">INTERNAL DEVELOPMENT TOOL</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />Calculation Test</h1>
-        <p className="lead">目前用來驗證時區、天文黃經、88° Design Moment，以及 Human Design Hub Free reference。這裡還不是正式人類圖。</p>
+        <p className="lead">目前驗證時區、天文黃經、88° Design Moment、Earth、True Lunar Nodes 與 Rave Mandala Gate/Line mapping。這裡仍是開發驗證頁，不是正式人類圖報告。</p>
       </section>
 
       <section className="card" style={{ marginTop: 18 }}>
@@ -85,7 +85,7 @@ export default function HumanDesignTestPage() {
         <section className="card" style={{ marginTop: 18, overflow: "auto" }}>
           <h2 style={{ marginTop: 0 }}>HD Hub Reference Comparison</h2>
           <p style={{ marginTop: 0, opacity: 0.72 }}>
-            目前正式保存 HD Hub Free endpoint 的原始 response。因 Self Engine 尚未完成 Gate/Line mapping，所以 Diff 會明確標示哪些欄位仍不可比較，不會自行猜測。
+            Diff 現在會逐一比較 Personality / Design 的 26 個 Gate.Line activation。只有 activation layer 全數一致後，才會進入 Channels、Centers、Type、Authority、Profile 與 Definition topology。
           </p>
           <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontSize: 12, lineHeight: 1.6 }}>{JSON.stringify(comparison, null, 2)}</pre>
         </section>
