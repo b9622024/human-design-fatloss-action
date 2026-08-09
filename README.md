@@ -15,3 +15,7 @@ Birth Data → Timezone Normalization → Ephemeris → Personality Activations 
 ## Secrets
 
 `HDHUB_API_KEY` 僅供 reference validation 使用，必須設定於 Vercel server-side Environment Variables，不得提交到 GitHub。
+
+## Deployment
+
+GitHub `main` is connected to Vercel. This commit intentionally retriggers deployment after the complete app skeleton was added.
