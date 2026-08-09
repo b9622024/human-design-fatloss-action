@@ -3,6 +3,7 @@ import { normalizeBirthTime } from "@/lib/human-design/time";
 import { getPlanetaryLongitudes } from "@/lib/human-design/astronomy";
 import { solveDesignMoment } from "@/lib/human-design/design-moment";
 import { buildHumanDesignActivations } from "@/lib/human-design/activations";
+import { buildCoreHumanDesignChart } from "@/lib/human-design/topology";
 import {
   buildActivationReferenceDiff,
   fetchHumanDesignHubReference,
@@ -29,11 +30,12 @@ export async function POST(request: NextRequest) {
     const designUtc = new Date(designMoment.utcDateTime);
     const personalityActivations = buildHumanDesignActivations(birthUtc);
     const designActivations = buildHumanDesignActivations(designUtc);
+    const coreChart = buildCoreHumanDesignChart(personalityActivations, designActivations);
 
     const selfCalculation = {
       engine: {
         name: "SelfHumanDesignAdapter",
-        stage: "activation-mapping",
+        stage: "core-topology",
         astronomyEngine: "2.1.19",
         raveMandalaMapping: "gate-41-origin-302deg-v1",
         nodePolicy: "true-node-osculating-orbital-plane",
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest) {
       designLongitudes: getPlanetaryLongitudes(designUtc),
       personalityActivations,
       designActivations,
+      coreChart,
     };
 
     const hdhubReference = await fetchHumanDesignHubReference(
@@ -54,6 +57,7 @@ export async function POST(request: NextRequest) {
       personality: personalityActivations,
       design: designActivations,
       reference: hdhubReference,
+      coreChart,
     });
 
     return NextResponse.json({
