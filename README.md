@@ -18,4 +18,4 @@ Birth Data → Timezone Normalization → Ephemeris → Personality Activations 
 
 ## Deployment
 
-GitHub `main` is connected to Vercel. This commit intentionally retriggers deployment after the complete app skeleton was added.
+GitHub `main` is connected to Vercel. Framework preset must be `Next.js` with Build/Output/Install/Development overrides disabled. This commit retriggers a fresh deployment after the Vercel framework preset was corrected.
