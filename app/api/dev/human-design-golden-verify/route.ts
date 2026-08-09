@@ -3,7 +3,11 @@ import { normalizeBirthTime } from "@/lib/human-design/time";
 import { solveDesignMoment } from "@/lib/human-design/design-moment";
 import { buildHumanDesignActivations } from "@/lib/human-design/activations";
 import { buildCoreHumanDesignChart } from "@/lib/human-design/topology";
-import { buildActivationReferenceDiff, fetchHumanDesignHubReference } from "@/lib/human-design/hdhub-reference";
+import {
+  buildActivationReferenceDiff,
+  fetchHumanDesignHubReference,
+  HumanDesignHubRequestError,
+} from "@/lib/human-design/hdhub-reference";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +35,30 @@ function compactReference(raw: unknown) {
   };
 }
 
+function serializeError(error: unknown) {
+  if (error instanceof HumanDesignHubRequestError) {
+    return {
+      kind: "HDHUB_HTTP_ERROR",
+      message: error.message,
+      httpStatus: error.status,
+      requestDateTime: error.requestDateTime,
+      responsePayload: error.payload,
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      kind: "APPLICATION_ERROR",
+      message: error.message,
+    };
+  }
+
+  return {
+    kind: "UNKNOWN_ERROR",
+    message: String(error),
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -45,46 +73,73 @@ export async function POST(request: NextRequest) {
 
     const results = [];
     for (const candidate of candidates) {
+      const id = candidate.id ?? null;
       const localDateTime = String(candidate.localDateTime ?? "");
       const timezone = String(candidate.timezone ?? "");
-      if (!localDateTime || !timezone) {
-        throw new Error(`Candidate ${candidate.id ?? "unknown"} is missing localDateTime/timezone`);
+
+      try {
+        if (!localDateTime || !timezone) {
+          throw new Error(`Candidate ${id ?? "unknown"} is missing localDateTime/timezone`);
+        }
+
+        const normalized = normalizeBirthTime(localDateTime, timezone);
+        const birthUtc = new Date(normalized.utcDateTime);
+        const designMoment = solveDesignMoment(birthUtc);
+        const designUtc = new Date(designMoment.utcDateTime);
+        const personality = buildHumanDesignActivations(birthUtc);
+        const design = buildHumanDesignActivations(designUtc);
+        const coreChart = buildCoreHumanDesignChart(personality, design);
+        const reference = await fetchHumanDesignHubReference(normalized.localDateTime);
+        const diff = buildActivationReferenceDiff({ personality, design, reference, coreChart });
+
+        results.push({
+          id,
+          ok: true,
+          input: { localDateTime, timezone },
+          birth: normalized,
+          designMoment,
+          self: coreChart,
+          reference: compactReference(reference.raw),
+          diff: {
+            status: diff.status,
+            activationAllMatch: diff.activationLayer.allMatch,
+            activationMatched: diff.activationLayer.matched,
+            activationTotal: diff.activationLayer.total,
+            topologyAllMatch: diff.topologyLayer?.allMatch ?? false,
+            topologyLayer: diff.topologyLayer,
+          },
+        });
+      } catch (error) {
+        results.push({
+          id,
+          ok: false,
+          input: { localDateTime, timezone },
+          error: serializeError(error),
+        });
       }
-
-      const normalized = normalizeBirthTime(localDateTime, timezone);
-      const birthUtc = new Date(normalized.utcDateTime);
-      const designMoment = solveDesignMoment(birthUtc);
-      const designUtc = new Date(designMoment.utcDateTime);
-      const personality = buildHumanDesignActivations(birthUtc);
-      const design = buildHumanDesignActivations(designUtc);
-      const coreChart = buildCoreHumanDesignChart(personality, design);
-      const reference = await fetchHumanDesignHubReference(normalized.localDateTime);
-      const diff = buildActivationReferenceDiff({ personality, design, reference, coreChart });
-
-      results.push({
-        id: candidate.id ?? null,
-        birth: normalized,
-        designMoment,
-        self: coreChart,
-        reference: compactReference(reference.raw),
-        diff: {
-          status: diff.status,
-          activationAllMatch: diff.activationLayer.allMatch,
-          activationMatched: diff.activationLayer.matched,
-          activationTotal: diff.activationLayer.total,
-          topologyAllMatch: diff.topologyLayer?.allMatch ?? false,
-          topologyLayer: diff.topologyLayer,
-        },
-      });
     }
 
+    const successful = results.filter((item) => item.ok);
+    const failed = results.filter((item) => !item.ok);
+    const matched = successful.filter(
+      (item) => "diff" in item && item.diff.status === "CORE_CHART_MATCH",
+    );
+
     return NextResponse.json({
-      status: results.every((item) => item.diff.status === "CORE_CHART_MATCH") ? "GOLDEN_BATCH_MATCH" : "GOLDEN_BATCH_HAS_MISMATCH",
-      verifiedCount: results.length,
-      apiCallsUsed: results.length,
-      allMatch: results.every((item) => item.diff.status === "CORE_CHART_MATCH"),
+      status:
+        failed.length === 0 && matched.length === results.length
+          ? "GOLDEN_BATCH_MATCH"
+          : failed.length > 0
+            ? "GOLDEN_BATCH_HAS_API_ERRORS"
+            : "GOLDEN_BATCH_HAS_MISMATCH",
+      requestedCount: candidates.length,
+      apiAttempts: candidates.length,
+      successCount: successful.length,
+      errorCount: failed.length,
+      coreChartMatchCount: matched.length,
+      allMatch: failed.length === 0 && matched.length === results.length,
       results,
-      note: "This endpoint calls Human Design Hub once per selected candidate. Results are compact snapshots suitable for freezing into offline Golden tests after review.",
+      note: "Each candidate is isolated. One HD Hub failure no longer aborts the batch; HTTP status and provider response payload are preserved for diagnosis.",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown Golden verification error";
