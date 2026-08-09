@@ -67,43 +67,6 @@ const GATE_PORTS: Record<number, Point> = {
   19: { x: 492, y: 725 }, 39: { x: 508, y: 730 }, 41: { x: 520, y: 740 },
 };
 
-/*
- * Fixed channel rails. The renderer does not infer routes from center centers.
- * Every channel has a stable visual lane between its two Gate ports.
- */
-const ROUTE_WAYPOINTS: Record<string, Point[]> = {
-  "16-48": [{ x: 374, y: 365 }, { x: 355, y: 455 }],
-  "20-57": [{ x: 360, y: 390 }, { x: 345, y: 485 }],
-  "10-20": [{ x: 398, y: 382 }],
-  "20-34": [{ x: 385, y: 410 }, { x: 385, y: 520 }],
-  "12-22": [{ x: 526, y: 382 }, { x: 548, y: 470 }],
-  "35-36": [{ x: 540, y: 394 }, { x: 563, y: 475 }],
-  "21-45": [{ x: 522, y: 345 }, { x: 548, y: 398 }],
-  "7-31": [{ x: 438, y: 370 }],
-  "13-33": [{ x: 468, y: 370 }],
-  "1-8": [{ x: 445, y: 372 }],
-  "2-14": [{ x: 430, y: 540 }],
-  "5-15": [{ x: 443, y: 540 }],
-  "29-46": [{ x: 468, y: 540 }],
-  "10-34": [{ x: 390, y: 505 }, { x: 397, y: 555 }],
-  "34-57": [{ x: 378, y: 580 }],
-  "27-50": [{ x: 374, y: 605 }],
-  "32-54": [{ x: 320, y: 648 }, { x: 350, y: 697 }],
-  "18-58": [{ x: 305, y: 650 }, { x: 365, y: 700 }],
-  "28-38": [{ x: 294, y: 635 }, { x: 392, y: 704 }],
-  "3-60": [{ x: 430, y: 694 }],
-  "9-52": [{ x: 451, y: 694 }],
-  "42-53": [{ x: 472, y: 694 }],
-  "19-49": [{ x: 535, y: 685 }, { x: 567, y: 646 }],
-  "39-55": [{ x: 558, y: 692 }, { x: 592, y: 645 }],
-  "30-41": [{ x: 580, y: 700 }, { x: 616, y: 640 }],
-  "25-51": [{ x: 521, y: 446 }],
-  "26-44": [{ x: 512, y: 510 }, { x: 431, y: 555 }],
-  "37-40": [{ x: 590, y: 522 }],
-  "10-57": [{ x: 388, y: 495 }, { x: 365, y: 535 }],
-  "6-59": [{ x: 515, y: 614 }],
-};
-
 function centerShape(center: CenterId, defined: boolean) {
   const p = CENTER_POINTS[center];
   const fill = defined ? CENTER_FILL[center] : "#ffffff";
@@ -137,97 +100,34 @@ function sourceColors(source: GateSource) {
   return [];
 }
 
-function distance(a: Point, b: Point) {
-  return Math.hypot(b.x - a.x, b.y - a.y);
+function lerp(a: Point, b: Point, t: number): Point {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
-function pointAtFraction(points: Point[], fraction: number) {
-  const total = points.slice(1).reduce((sum, p, i) => sum + distance(points[i], p), 0);
-  const target = total * fraction;
-  let walked = 0;
-  for (let i = 1; i < points.length; i++) {
-    const seg = distance(points[i - 1], points[i]);
-    if (walked + seg >= target) {
-      const t = seg === 0 ? 0 : (target - walked) / seg;
-      return { x: points[i - 1].x + (points[i].x - points[i - 1].x) * t, y: points[i - 1].y + (points[i].y - points[i - 1].y) * t };
-    }
-    walked += seg;
-  }
-  return points[points.length - 1];
+function offsetSegment(a: Point, b: Point, offset: number): [Point, Point] {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const ox = (-dy / length) * offset;
+  const oy = (dx / length) * offset;
+  return [
+    { x: a.x + ox, y: a.y + oy },
+    { x: b.x + ox, y: b.y + oy },
+  ];
 }
 
-function trimToFraction(points: Point[], fraction: number) {
-  if (fraction <= 0) return [points[0]];
-  if (fraction >= 1) return points;
-  const total = points.slice(1).reduce((sum, p, i) => sum + distance(points[i], p), 0);
-  const target = total * fraction;
-  const out: Point[] = [points[0]];
-  let walked = 0;
-  for (let i = 1; i < points.length; i++) {
-    const seg = distance(points[i - 1], points[i]);
-    if (walked + seg < target) {
-      out.push(points[i]);
-      walked += seg;
-      continue;
-    }
-    const t = seg === 0 ? 0 : (target - walked) / seg;
-    out.push({ x: points[i - 1].x + (points[i].x - points[i - 1].x) * t, y: points[i - 1].y + (points[i].y - points[i - 1].y) * t });
-    break;
-  }
-  return out;
-}
-
-function splitAtHalf(points: Point[]) {
-  const mid = pointAtFraction(points, 0.5);
-  const left = trimToFraction(points, 0.5);
-  const reversed = [...points].reverse();
-  const right = trimToFraction(reversed, 0.5);
-  left[left.length - 1] = mid;
-  right[right.length - 1] = mid;
-  return { left, right };
-}
-
-/*
- * Rounded polyline without SVG's reflected T control point. The previous T
- * command could overshoot at the final segment and visually bend a channel
- * away from its destination Gate. This path only rounds explicit corners.
- */
-function roundedPath(points: Point[], radius = 9) {
-  if (points.length < 2) return "";
-  if (points.length === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
-
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length - 1; i++) {
-    const prev = points[i - 1];
-    const current = points[i];
-    const next = points[i + 1];
-    const before = distance(prev, current);
-    const after = distance(current, next);
-    const r = Math.min(radius, before * 0.3, after * 0.3);
-    const inPoint = {
-      x: current.x - ((current.x - prev.x) / Math.max(before, 0.001)) * r,
-      y: current.y - ((current.y - prev.y) / Math.max(before, 0.001)) * r,
-    };
-    const outPoint = {
-      x: current.x + ((next.x - current.x) / Math.max(after, 0.001)) * r,
-      y: current.y + ((next.y - current.y) / Math.max(after, 0.001)) * r,
-    };
-    d += ` L ${inPoint.x} ${inPoint.y} Q ${current.x} ${current.y} ${outPoint.x} ${outPoint.y}`;
-  }
-  const last = points[points.length - 1];
-  d += ` L ${last.x} ${last.y}`;
-  return d;
-}
-
-function ColoredPath({ points, source, width = 5.6 }: { points: Point[]; source: GateSource; width?: number }) {
+function StraightSegment({ a, b, source, width = 7 }: { a: Point; b: Point; source: GateSource; width?: number }) {
   const colors = sourceColors(source);
   if (!colors.length) return null;
-  const d = roundedPath(points);
-  if (colors.length === 1) return <path d={d} fill="none" stroke={colors[0]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />;
+  if (colors.length === 1) {
+    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colors[0]} strokeWidth={width} strokeLinecap="butt" />;
+  }
+  const [a1, b1] = offsetSegment(a, b, -2.1);
+  const [a2, b2] = offsetSegment(a, b, 2.1);
   return (
     <g>
-      <path d={d} fill="none" stroke={colors[0]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke={colors[1]} strokeWidth={Math.max(2.4, width / 2)} strokeLinecap="round" strokeLinejoin="round" />
+      <line x1={a1.x} y1={a1.y} x2={b1.x} y2={b1.y} stroke={colors[0]} strokeWidth={Math.max(3.2, width / 2)} strokeLinecap="butt" />
+      <line x1={a2.x} y1={a2.y} x2={b2.x} y2={b2.y} stroke={colors[1]} strokeWidth={Math.max(3.2, width / 2)} strokeLinecap="butt" />
     </g>
   );
 }
@@ -277,37 +177,34 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
           const id = canonicalChannelId(channel.gateA, channel.gateB);
           const a = GATE_PORTS[channel.gateA] ?? CENTER_POINTS[channel.centerA];
           const b = GATE_PORTS[channel.gateB] ?? CENTER_POINTS[channel.centerB];
-          const path = [a, ...(ROUTE_WAYPOINTS[id] ?? []), b];
+          const mid = lerp(a, b, 0.5);
           const complete = activeChannels.has(id);
           const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
           const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
-          const { left, right } = splitAtHalf(path);
-
-          // A hanging Gate is intentionally a short stub near its own Gate port.
-          // It must not travel into shared channel intersections.
-          const stubA = trimToFraction(path, 0.16);
-          const stubB = trimToFraction([...path].reverse(), 0.16);
+          const stubA = lerp(a, b, 0.38);
+          const stubB = lerp(b, a, 0.38);
 
           return (
             <g key={id}>
-              <path
-                d={roundedPath(path)}
-                fill="none"
-                stroke="#d7d3cc"
-                strokeWidth="1.7"
-                strokeOpacity="0.42"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <line
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke="#c9c5bd"
+                strokeWidth="3.1"
+                strokeOpacity="0.72"
+                strokeLinecap="butt"
               />
               {complete ? (
                 <>
-                  {sourceA !== "inactive" && <ColoredPath points={left} source={sourceA} />}
-                  {sourceB !== "inactive" && <ColoredPath points={right} source={sourceB} />}
+                  {sourceA !== "inactive" && <StraightSegment a={a} b={mid} source={sourceA} width={7.4} />}
+                  {sourceB !== "inactive" && <StraightSegment a={b} b={mid} source={sourceB} width={7.4} />}
                 </>
               ) : (
                 <>
-                  {sourceA !== "inactive" && <ColoredPath points={stubA} source={sourceA} width={5.2} />}
-                  {sourceB !== "inactive" && <ColoredPath points={stubB} source={sourceB} width={5.2} />}
+                  {sourceA !== "inactive" && <StraightSegment a={a} b={stubA} source={sourceA} width={6.8} />}
+                  {sourceB !== "inactive" && <StraightSegment a={b} b={stubB} source={sourceB} width={6.8} />}
                 </>
               )}
             </g>
@@ -330,7 +227,7 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
           const source = gateSources.get(gate) ?? "inactive";
           return (
             <g key={`gate-${gate}`}>
-              <circle cx={port.x} cy={port.y} r="8.2" fill="#fbfaf7" opacity="0.97" />
+              <circle cx={port.x} cy={port.y} r="8.2" fill="#fbfaf7" opacity="0.98" />
               <text x={port.x} y={port.y + 3.2} textAnchor="middle" fontSize="9.2" fontWeight="900" fill={gateTextColor(source)}>{gate}</text>
             </g>
           );
