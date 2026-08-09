@@ -3,15 +3,30 @@ export default function Home() {
     <main className="page-shell">
       <section className="hero-card">
         <div className="eyebrow">可樂吉健康研究所</div>
-        <div className="status">DEVELOPMENT · v0.1</div>
+        <div className="status">DEVELOPMENT · v0.2</div>
         <h1>人類圖減脂<br />行動測驗</h1>
         <p className="lead">
           Human Design × 行為測驗，整理你的決策節奏、執行偏好與適合的行動方式。
         </p>
         <div className="notice">
-          <strong>開發環境已建立</strong>
-          <span>下一階段將接入自建 Human Design Calculation Engine。</span>
+          <strong>BodyGraph 已接入正式流程骨架</strong>
+          <span>目前可先建立人類圖，下一階段接上 8 題行為測驗與減脂行動建議。</span>
         </div>
+        <a
+          href="/assessment"
+          style={{
+            display: "inline-block",
+            marginTop: 22,
+            padding: "15px 24px",
+            borderRadius: 999,
+            background: "#17172d",
+            color: "#fff",
+            textDecoration: "none",
+            fontWeight: 800,
+          }}
+        >
+          開始測驗
+        </a>
       </section>
 
       <section className="grid">
@@ -37,7 +52,7 @@ export default function Home() {
         </article>
       </section>
 
-      <p className="footer-note">目前僅為部署驗證頁，不產生正式 Human Design 結果。</p>
+      <p className="footer-note">目前為開發測試流程，正式報告內容尚未開放。</p>
     </main>
   );
 }
