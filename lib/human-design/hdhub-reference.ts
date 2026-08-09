@@ -51,16 +51,32 @@ function extractApiMessage(payload: unknown): string {
   return "";
 }
 
+function normalizeDateTimeForHdHub(value: string): string {
+  // HD Hub currently rejects ISO strings ending in Z and expects an explicit
+  // numeric UTC offset, e.g. +00:00. Preserve all non-zero offsets unchanged.
+  return value.endsWith("Z") ? `${value.slice(0, -1)}+00:00` : value;
+}
+
+function normalizeAuthorityLabel(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const label = String(value);
+  // HD Hub names Emotional authority as "Emotional" while our canonical
+  // internal label is "Solar Plexus". They are semantically equivalent.
+  if (label === "Emotional") return "Solar Plexus";
+  return label;
+}
+
 export async function fetchHumanDesignHubReference(
   offsetDateTime: string,
 ): Promise<HumanDesignHubReferenceResult> {
+  const requestDateTime = normalizeDateTimeForHdHub(offsetDateTime);
   const response = await fetch(HDHUB_SIMPLE_BODYGRAPH_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-API-KEY": requireApiKey(),
     },
-    body: JSON.stringify({ datetime: offsetDateTime }),
+    body: JSON.stringify({ datetime: requestDateTime }),
     cache: "no-store",
   });
 
@@ -79,7 +95,7 @@ export async function fetchHumanDesignHubReference(
     throw new HumanDesignHubRequestError({
       status: response.status,
       payload,
-      requestDateTime: offsetDateTime,
+      requestDateTime,
       message: extractApiMessage(payload),
     });
   }
@@ -87,7 +103,7 @@ export async function fetchHumanDesignHubReference(
   return {
     source: "HumanDesignHub",
     endpoint: "/v2/simple-bodygraph",
-    requestDateTime: offsetDateTime,
+    requestDateTime,
     fetchedAt: new Date().toISOString(),
     raw: payload,
   };
@@ -165,6 +181,7 @@ export function buildActivationReferenceDiff(args: {
       : {};
 
   const activationAllMatch = personality.allMatch && design.allMatch;
+  const normalizedReferenceAuthority = normalizeAuthorityLabel(raw.authority);
   const topology = args.coreChart
     ? {
         activeGates: {
@@ -184,7 +201,12 @@ export function buildActivationReferenceDiff(args: {
         },
         type: { self: args.coreChart.type, reference: raw.type ?? null, match: args.coreChart.type === raw.type },
         strategy: { self: args.coreChart.strategy, reference: raw.strategy ?? null, match: args.coreChart.strategy === raw.strategy },
-        authority: { self: args.coreChart.authority, reference: raw.authority ?? null, match: args.coreChart.authority === raw.authority },
+        authority: {
+          self: args.coreChart.authority,
+          reference: raw.authority ?? null,
+          normalizedReference: normalizedReferenceAuthority,
+          match: args.coreChart.authority === normalizedReferenceAuthority,
+        },
         profile: { self: args.coreChart.profile, reference: raw.profile ?? null, match: args.coreChart.profile === raw.profile },
         definition: { self: args.coreChart.definition, reference: raw.definition ?? null, match: args.coreChart.definition === raw.definition },
       }
