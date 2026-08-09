@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizeBirthTime } from "@/lib/human-design/time";
 import { getPlanetaryLongitudes } from "@/lib/human-design/astronomy";
 import { solveDesignMoment } from "@/lib/human-design/design-moment";
+import { buildHumanDesignActivations } from "@/lib/human-design/activations";
 import {
-  buildPreliminaryReferenceDiff,
+  buildActivationReferenceDiff,
   fetchHumanDesignHubReference,
 } from "@/lib/human-design/hdhub-reference";
 
@@ -26,27 +27,34 @@ export async function POST(request: NextRequest) {
     const birthUtc = new Date(normalized.utcDateTime);
     const designMoment = solveDesignMoment(birthUtc);
     const designUtc = new Date(designMoment.utcDateTime);
+    const personalityActivations = buildHumanDesignActivations(birthUtc);
+    const designActivations = buildHumanDesignActivations(designUtc);
 
     const selfCalculation = {
       engine: {
         name: "SelfHumanDesignAdapter",
-        stage: "ephemeris-and-design-moment",
+        stage: "activation-mapping",
         astronomyEngine: "2.1.19",
+        raveMandalaMapping: "gate-41-origin-302deg-v1",
+        nodePolicy: "true-node-meeus-perturbation-series",
         productionHumanDesignReady: false,
       },
       birthTime: normalized,
-      personality: getPlanetaryLongitudes(birthUtc),
+      personalityLongitudes: getPlanetaryLongitudes(birthUtc),
       designMoment,
-      design: getPlanetaryLongitudes(designUtc),
+      designLongitudes: getPlanetaryLongitudes(designUtc),
+      personalityActivations,
+      designActivations,
     };
 
     const hdhubReference = await fetchHumanDesignHubReference(
       normalized.localDateTime,
     );
-    const diff = buildPreliminaryReferenceDiff(
-      selfCalculation as Record<string, unknown>,
-      hdhubReference,
-    );
+    const diff = buildActivationReferenceDiff({
+      personality: personalityActivations,
+      design: designActivations,
+      reference: hdhubReference,
+    });
 
     return NextResponse.json({
       selfCalculation,
