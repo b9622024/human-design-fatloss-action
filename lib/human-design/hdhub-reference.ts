@@ -1,4 +1,5 @@
 import { HumanDesignActivation, activationsToGateLineRecord } from "@/lib/human-design/activations";
+import type { CoreHumanDesignChart } from "@/lib/human-design/topology";
 
 export const HDHUB_SIMPLE_BODYGRAPH_URL =
   "https://api.humandesignhub.app/v2/simple-bodygraph";
@@ -95,12 +96,7 @@ function compareSide(self: HumanDesignActivation[], reference?: GateLineMap) {
       referenceValue !== null &&
       selfValue[0] === referenceValue[0] &&
       selfValue[1] === referenceValue[1];
-    return {
-      body,
-      self: selfValue,
-      reference: referenceValue,
-      match,
-    };
+    return { body, self: selfValue, reference: referenceValue, match };
   });
   return {
     rows,
@@ -110,10 +106,25 @@ function compareSide(self: HumanDesignActivation[], reference?: GateLineMap) {
   };
 }
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(String).sort();
+}
+
+function normalizeNumberArray(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+}
+
+function arraysEqual<T>(a: T[], b: T[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
 export function buildActivationReferenceDiff(args: {
   personality: HumanDesignActivation[];
   design: HumanDesignActivation[];
   reference: HumanDesignHubReferenceResult;
+  coreChart?: CoreHumanDesignChart;
 }) {
   const referenceGateLines = extractGateAndLine(args.reference);
   const personality = compareSide(args.personality, referenceGateLines.personality);
@@ -123,18 +134,57 @@ export function buildActivationReferenceDiff(args: {
       ? (args.reference.raw as Record<string, unknown>)
       : {};
 
+  const activationAllMatch = personality.allMatch && design.allMatch;
+  const topology = args.coreChart
+    ? {
+        activeGates: {
+          self: args.coreChart.activeGates,
+          reference: normalizeNumberArray(raw.gates),
+          match: arraysEqual(args.coreChart.activeGates, normalizeNumberArray(raw.gates)),
+        },
+        channels: {
+          self: [...args.coreChart.channels].sort(),
+          reference: normalizeStringArray(raw.channels_short),
+          match: arraysEqual([...args.coreChart.channels].sort(), normalizeStringArray(raw.channels_short)),
+        },
+        centers: {
+          self: [...args.coreChart.centers].sort(),
+          reference: normalizeStringArray(raw.centers),
+          match: arraysEqual([...args.coreChart.centers].sort(), normalizeStringArray(raw.centers)),
+        },
+        type: { self: args.coreChart.type, reference: raw.type ?? null, match: args.coreChart.type === raw.type },
+        strategy: { self: args.coreChart.strategy, reference: raw.strategy ?? null, match: args.coreChart.strategy === raw.strategy },
+        authority: { self: args.coreChart.authority, reference: raw.authority ?? null, match: args.coreChart.authority === raw.authority },
+        profile: { self: args.coreChart.profile, reference: raw.profile ?? null, match: args.coreChart.profile === raw.profile },
+        definition: { self: args.coreChart.definition, reference: raw.definition ?? null, match: args.coreChart.definition === raw.definition },
+      }
+    : null;
+
+  const topologyAllMatch = topology
+    ? Object.values(topology).every((item) => item.match)
+    : false;
+
   return {
     status:
-      personality.allMatch && design.allMatch
-        ? "ACTIVATION_LAYER_MATCH"
-        : "ACTIVATION_LAYER_MISMATCH",
+      activationAllMatch && topologyAllMatch
+        ? "CORE_CHART_MATCH"
+        : activationAllMatch
+          ? "ACTIVATION_MATCH_TOPOLOGY_MISMATCH"
+          : "ACTIVATION_LAYER_MISMATCH",
     activationLayer: {
       personality,
       design,
       matched: personality.matched + design.matched,
       total: personality.total + design.total,
-      allMatch: personality.allMatch && design.allMatch,
+      allMatch: activationAllMatch,
     },
+    topologyLayer: topology
+      ? {
+          ...topology,
+          allMatch: topologyAllMatch,
+          validationBlockedByActivationMismatch: !activationAllMatch,
+        }
+      : null,
     referenceChartSummary: {
       type: raw.type ?? null,
       strategy: raw.strategy ?? null,
@@ -145,15 +195,5 @@ export function buildActivationReferenceDiff(args: {
       channels: raw.channels_short ?? null,
       centers: raw.centers ?? null,
     },
-    pendingTopologyComparison: [
-      "type",
-      "strategy",
-      "authority",
-      "profile",
-      "definition",
-      "active_gates",
-      "channels",
-      "centers",
-    ],
   };
 }
