@@ -68,10 +68,8 @@ const GATE_PORTS: Record<number, Point> = {
 };
 
 /*
- * V6 channel rails. Each route is intentionally separated from neighboring
- * channels, so a channel keeps a recognizable lane from its source Gate port
- * to its destination Gate port. Central channels stay compact while the
- * Spleen / Solar Plexus branches use outside rails.
+ * Fixed channel rails. The renderer does not infer routes from center centers.
+ * Every channel has a stable visual lane between its two Gate ports.
  */
 const ROUTE_WAYPOINTS: Record<string, Point[]> = {
   "16-48": [{ x: 374, y: 365 }, { x: 355, y: 455 }],
@@ -189,31 +187,47 @@ function splitAtHalf(points: Point[]) {
   return { left, right };
 }
 
-function smoothPath(points: Point[]) {
+/*
+ * Rounded polyline without SVG's reflected T control point. The previous T
+ * command could overshoot at the final segment and visually bend a channel
+ * away from its destination Gate. This path only rounds explicit corners.
+ */
+function roundedPath(points: Point[], radius = 9) {
   if (points.length < 2) return "";
   if (points.length === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+
   let d = `M ${points[0].x} ${points[0].y}`;
   for (let i = 1; i < points.length - 1; i++) {
-    const p = points[i];
+    const prev = points[i - 1];
+    const current = points[i];
     const next = points[i + 1];
-    const mx = (p.x + next.x) / 2;
-    const my = (p.y + next.y) / 2;
-    d += ` Q ${p.x} ${p.y} ${mx} ${my}`;
+    const before = distance(prev, current);
+    const after = distance(current, next);
+    const r = Math.min(radius, before * 0.3, after * 0.3);
+    const inPoint = {
+      x: current.x - ((current.x - prev.x) / Math.max(before, 0.001)) * r,
+      y: current.y - ((current.y - prev.y) / Math.max(before, 0.001)) * r,
+    };
+    const outPoint = {
+      x: current.x + ((next.x - current.x) / Math.max(after, 0.001)) * r,
+      y: current.y + ((next.y - current.y) / Math.max(after, 0.001)) * r,
+    };
+    d += ` L ${inPoint.x} ${inPoint.y} Q ${current.x} ${current.y} ${outPoint.x} ${outPoint.y}`;
   }
   const last = points[points.length - 1];
-  d += ` T ${last.x} ${last.y}`;
+  d += ` L ${last.x} ${last.y}`;
   return d;
 }
 
-function ColoredPath({ points, source, width = 6.5 }: { points: Point[]; source: GateSource; width?: number }) {
+function ColoredPath({ points, source, width = 5.6 }: { points: Point[]; source: GateSource; width?: number }) {
   const colors = sourceColors(source);
   if (!colors.length) return null;
-  const d = smoothPath(points);
+  const d = roundedPath(points);
   if (colors.length === 1) return <path d={d} fill="none" stroke={colors[0]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />;
   return (
     <g>
       <path d={d} fill="none" stroke={colors[0]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke={colors[1]} strokeWidth={Math.max(2.8, width / 2)} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={colors[1]} strokeWidth={Math.max(2.4, width / 2)} strokeLinecap="round" strokeLinejoin="round" />
     </g>
   );
 }
@@ -264,17 +278,38 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
           const a = GATE_PORTS[channel.gateA] ?? CENTER_POINTS[channel.centerA];
           const b = GATE_PORTS[channel.gateB] ?? CENTER_POINTS[channel.centerB];
           const path = [a, ...(ROUTE_WAYPOINTS[id] ?? []), b];
-          const { left, right } = splitAtHalf(path);
           const complete = activeChannels.has(id);
           const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
           const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
-          const leftActive = complete ? left : trimToFraction(left, 0.55);
-          const rightActive = complete ? right : trimToFraction(right, 0.55);
+          const { left, right } = splitAtHalf(path);
+
+          // A hanging Gate is intentionally a short stub near its own Gate port.
+          // It must not travel into shared channel intersections.
+          const stubA = trimToFraction(path, 0.16);
+          const stubB = trimToFraction([...path].reverse(), 0.16);
+
           return (
             <g key={id}>
-              <path d={smoothPath(path)} fill="none" stroke="#ddd9d2" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-              {sourceA !== "inactive" && <ColoredPath points={leftActive} source={sourceA} />}
-              {sourceB !== "inactive" && <ColoredPath points={rightActive} source={sourceB} />}
+              <path
+                d={roundedPath(path)}
+                fill="none"
+                stroke="#d7d3cc"
+                strokeWidth="1.7"
+                strokeOpacity="0.42"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {complete ? (
+                <>
+                  {sourceA !== "inactive" && <ColoredPath points={left} source={sourceA} />}
+                  {sourceB !== "inactive" && <ColoredPath points={right} source={sourceB} />}
+                </>
+              ) : (
+                <>
+                  {sourceA !== "inactive" && <ColoredPath points={stubA} source={sourceA} width={5.2} />}
+                  {sourceB !== "inactive" && <ColoredPath points={stubB} source={sourceB} width={5.2} />}
+                </>
+              )}
             </g>
           );
         })}
