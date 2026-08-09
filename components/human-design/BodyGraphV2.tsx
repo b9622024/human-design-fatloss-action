@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.4";
+export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.5";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -35,7 +35,7 @@ const SHAPES:Record<CenterId,Shape> = {
   Ajna:{kind:"polygon",points:[{x:408,y:138},{x:492,y:138},{x:450,y:208}]},
   Throat:{kind:"rect",x:407,y:244,width:86,height:82,rx:4},
   G:{kind:"polygon",points:[{x:450,y:352},{x:492,y:394},{x:450,y:436},{x:408,y:394}]},
-  Ego:{kind:"polygon",points:[{x:516,y:354},{x:500,y:412},{x:550,y:412}]},
+  Ego:{kind:"polygon",points:[{x:534,y:354},{x:518,y:412},{x:568,y:412}]},
   Spleen:{kind:"polygon",points:[{x:250,y:438},{x:390,y:510},{x:250,y:582}]},
   "Solar Plexus":{kind:"polygon",points:[{x:650,y:438},{x:510,y:510},{x:650,y:582}]},
   Sacral:{kind:"rect",x:408,y:492,width:84,height:88,rx:4},
@@ -44,7 +44,7 @@ const SHAPES:Record<CenterId,Shape> = {
 
 const CENTER_LABEL:Record<CenterId,Point> = {
   Head:{x:450,y:80}, Ajna:{x:450,y:174}, Throat:{x:450,y:286}, G:{x:450,y:399},
-  Ego:{x:524,y:392}, Spleen:{x:306,y:517}, "Solar Plexus":{x:594,y:517},
+  Ego:{x:542,y:392}, Spleen:{x:306,y:517}, "Solar Plexus":{x:594,y:517},
   Sacral:{x:450,y:540}, Root:{x:450,y:697},
 };
 
@@ -54,16 +54,22 @@ const GATE:Record<number,Point> = {
   17:{x:417,y:153}, 11:{x:483,y:153}, 43:{x:450,y:208},
   62:{x:425,y:244}, 23:{x:450,y:244}, 56:{x:475,y:244},
   16:{x:407,y:262}, 20:{x:407,y:303},
-  45:{x:493,y:262}, 12:{x:493,y:282}, 35:{x:493,y:303},
+  35:{x:493,y:262}, 12:{x:493,y:282}, 45:{x:493,y:303},
   31:{x:425,y:326}, 8:{x:450,y:326}, 33:{x:475,y:326},
   1:{x:450,y:352}, 7:{x:423,y:379}, 13:{x:477,y:379},
   10:{x:408,y:394}, 25:{x:492,y:394},
   15:{x:435,y:421}, 46:{x:465,y:421}, 2:{x:450,y:436},
-  21:{x:516,y:354}, 51:{x:505,y:394}, 26:{x:507,y:412}, 40:{x:542,y:412},
-  48:{x:337.5,y:483}, 57:{x:356.9,y:493}, 44:{x:378.3,y:504},
+
+  21:{x:534,y:354}, 51:{x:523,y:394}, 26:{x:525,y:412}, 40:{x:560,y:412},
+
+  /* Upper Spleen edge: spread 48 / 57 / 44 evenly instead of crowding the apex. */
+  48:{x:309,y:468}, 57:{x:337,y:483}, 44:{x:365,y:497},
   50:{x:374.4,y:518}, 32:{x:337.5,y:537}, 18:{x:298.6,y:557}, 28:{x:259.7,y:577},
-  36:{x:562.5,y:483}, 22:{x:543.1,y:493}, 37:{x:521.7,y:504},
+
+  /* Upper Solar edge: keep 37 closest to the apex, then spread 22 / 36 outward. */
+  37:{x:528,y:501}, 22:{x:565,y:482}, 36:{x:603,y:462},
   6:{x:525.6,y:518}, 49:{x:562.5,y:537}, 55:{x:601.4,y:557}, 30:{x:640.3,y:577},
+
   5:{x:426,y:492}, 14:{x:450,y:492}, 29:{x:474,y:492},
   34:{x:408,y:510}, 27:{x:408,y:536}, 59:{x:408,y:562},
   3:{x:426,y:580}, 9:{x:450,y:580}, 42:{x:474,y:580},
@@ -78,9 +84,9 @@ const INTEGRATION_ROUTE:Record<string,Point[]> = {
   "10-20":[GATE[10],{x:399,y:371},{x:399,y:338},GATE[20]],
   "20-34":[GATE[20],{x:399,y:338},{x:392,y:430},{x:400,y:482},GATE[34]],
   "10-34":[GATE[10],{x:399,y:371},{x:392,y:430},{x:400,y:482},GATE[34]],
-  "20-57":[GATE[20],{x:399,y:338},{x:392,y:430},{x:370,y:486},GATE[57]],
-  "34-57":[GATE[34],{x:400,y:482},{x:370,y:486},GATE[57]],
-  "10-57":[GATE[10],{x:399,y:371},{x:392,y:430},{x:370,y:486},GATE[57]],
+  "20-57":[GATE[20],{x:399,y:338},{x:392,y:430},{x:358,y:478},GATE[57]],
+  "34-57":[GATE[34],{x:400,y:482},{x:358,y:478},GATE[57]],
+  "10-57":[GATE[10],{x:399,y:371},{x:392,y:430},{x:358,y:478},GATE[57]],
 };
 
 function gateSource(gate:number,personality:Set<number>,design:Set<number>):GateSource{
