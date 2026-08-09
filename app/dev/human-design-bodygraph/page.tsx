@@ -47,10 +47,10 @@ export default function HumanDesignBodyGraphPage() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V3</div>
+        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V4</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />BodyGraph SVG</h1>
         <p className="lead">
-          V3 加入 Hanging Gates 半通道顯示。完整 Channel 會連到中點；只有單側 Gate 啟動時，會保留紅／黑半通道與中央缺口，更接近正式 Human Design BodyGraph 的閱讀方式。
+          V4 把 Gate 編號從通道中段移到各 Center 邊緣的固定 Gate Port。通道線在底層、Center 在中層、Gate 標籤在最上層，優先解決高密度區域的文字重疊。
         </p>
       </section>
 
@@ -65,16 +65,16 @@ export default function HumanDesignBodyGraphPage() {
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ padding: 14, borderRadius: 12, border: "1px solid #d9d4ca", fontSize: 16 }} />
           </label>
           <button type="submit" disabled={loading} style={{ padding: 15, border: 0, borderRadius: 999, background: "#17172d", color: "white", fontWeight: 700, fontSize: 15 }}>
-            {loading ? "計算中…" : "產生 BodyGraph V3"}
+            {loading ? "計算中…" : "產生 BodyGraph V4"}
           </button>
         </form>
       </section>
 
       {result?.coreChart && (
         <section className="card" style={{ marginTop: 18 }}>
-          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V3</h2>
+          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V4</h2>
           <p style={{ marginTop: -4, opacity: 0.68, lineHeight: 1.6 }}>
-            黑色＝Personality，紅色＝Design，黑紅雙線＝同一 Gate 在兩側啟動。單側啟動會以半通道顯示；灰色為未啟動區段。
+            黑色＝Personality，紅色＝Design，黑紅雙線＝同一 Gate 在兩側啟動。Gate 編號固定在 Center 邊緣，不再跟著通道中段移動；半通道規則維持不變。
           </p>
           <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
             <BodyGraph
