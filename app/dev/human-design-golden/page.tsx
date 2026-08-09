@@ -48,7 +48,7 @@ export default function HumanDesignGoldenPage() {
     setVerifying(true);
     setVerification(null);
     try {
-      const candidates = discovery.selected.slice(0, 8).map((candidate) => ({
+      const candidates = discovery.selected.slice(0, 9).map((candidate) => ({
         id: candidate.id,
         localDateTime: candidate.localDateTime,
         timezone: candidate.timezone,
@@ -81,10 +81,10 @@ export default function HumanDesignGoldenPage() {
           {discovering ? "搜尋中…" : "1. 搜尋 Golden 候選（0 API credits）"}
         </button>
         <button type="button" onClick={verify} disabled={verifying || discovering || !discovery?.selected?.length} style={{ padding: 15, border: "1px solid #17172d", borderRadius: 999, background: "white", color: "#17172d", fontWeight: 700, fontSize: 15 }}>
-          {verifying ? "驗證中…" : "2. 用 HD Hub 驗證前 8 組候選"}
+          {verifying ? "驗證中…" : "2. 用 HD Hub 驗證全部 9 組候選"}
         </button>
         <p style={{ opacity: 0.68, lineHeight: 1.7, margin: 0 }}>
-          第二步會對 Human Design Hub 發出最多 8 次 reference requests。只有你按下第二顆按鈕才會使用 API 額度。
+          第二步會對 Human Design Hub 發出最多 9 次 reference requests，包含 Reflector 候選。只有你按下第二顆按鈕才會使用 API 額度。
         </p>
       </section>
 
