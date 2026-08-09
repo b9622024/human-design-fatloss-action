@@ -1,75 +1,74 @@
-const J2000_EPOCH = 2451545.0;
-const DAYS_PER_JULIAN_CENTURY = 36525;
-const DEG_TO_RAD = Math.PI / 180;
+import * as Astronomy from "astronomy-engine";
 
 function normalizeDegrees(value: number): number {
   return ((value % 360) + 360) % 360;
 }
 
-export function dateToJulianDate(date: Date): number {
-  return date.getTime() / 86400000 + 2440587.5;
-}
-
 export type LunarNodePosition = {
   northNode: number;
   southNode: number;
-  method: "true-node-meeus-perturbation-series";
+  method: "true-node-osculating-orbital-plane";
 };
 
-export function getTrueNodeLongitudeFromJulianDate(jd: number): number {
-  const T = (jd - J2000_EPOCH) / DAYS_PER_JULIAN_CENTURY;
-  const T2 = T * T;
-  const T3 = T2 * T;
-  const T4 = T3 * T;
+type Vec3 = { x: number; y: number; z: number };
 
-  const D =
-    (297.8501921 + 445267.1114034 * T - 0.0018819 * T2 + T3 / 545868 - T4 / 113065000) *
-    DEG_TO_RAD;
-  const M =
-    (357.5291092 + 35999.0502909 * T - 0.0001536 * T2 + T3 / 24490000) *
-    DEG_TO_RAD;
-  const Mprime =
-    (134.9633964 + 477198.8675055 * T + 0.0087414 * T2 + T3 / 69699 - T4 / 14712000) *
-    DEG_TO_RAD;
-  const F =
-    (93.272095 + 483202.0175233 * T - 0.0036539 * T2 - T3 / 3526000 + T4 / 863310000) *
-    DEG_TO_RAD;
+function rotateEqjToTrueEclipticOfDate(vector: Astronomy.Vector, date: Date): Vec3 {
+  const rotation = Astronomy.Rotation_EQJ_ECT(date);
+  const rotated = Astronomy.RotateVector(rotation, vector);
+  return { x: rotated.x, y: rotated.y, z: rotated.z };
+}
 
-  let omega =
-    125.0445479 -
-    1934.1362891 * T +
-    0.0020754 * T2 +
-    T3 / 467441 -
-    T4 / 60616000;
+function moonVectorInCommonEclipticFrame(sampleDate: Date, frameDate: Date): Vec3 {
+  // aberration=false keeps this geometric, which is what we want for an
+  // instantaneous orbital-plane estimate rather than apparent sky position.
+  const eqj = Astronomy.GeoVector(Astronomy.Body.Moon, sampleDate, false);
+  return rotateEqjToTrueEclipticOfDate(eqj, frameDate);
+}
 
-  const perturbations =
-    -1.4979 * Math.sin(2 * (D - F)) +
-    -0.15 * Math.sin(M) +
-    -0.1226 * Math.sin(2 * D) +
-    0.1176 * Math.sin(2 * F) +
-    -0.0801 * Math.sin(2 * (Mprime - F)) +
-    0.0943 * Math.sin(2 * (D + F)) +
-    0.0582 * Math.sin(2 * D - Mprime) +
-    -0.0539 * Math.sin(Mprime - 2 * F) +
-    -0.0458 * Math.sin(2 * D - M) +
-    0.0327 * Math.sin(2 * D + Mprime) +
-    -0.0304 * Math.sin(Mprime + 2 * F) +
-    -0.0173 * Math.sin(2 * (D - Mprime)) +
-    -0.0168 * Math.sin(M + 2 * F) +
-    0.0119 * Math.sin(Mprime) +
-    0.0107 * Math.sin(M - 2 * F) +
-    -0.0102 * Math.sin(2 * D + M) +
-    -0.0081 * Math.sin(2 * Mprime);
+function subtract(a: Vec3, b: Vec3): Vec3 {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+}
 
-  omega += perturbations;
-  return normalizeDegrees(omega);
+function cross(a: Vec3, b: Vec3): Vec3 {
+  return {
+    x: a.y * b.z - a.z * b.y,
+    y: a.z * b.x - a.x * b.z,
+    z: a.x * b.y - a.y * b.x,
+  };
+}
+
+/**
+ * Computes the true (osculating) ascending lunar node from the Moon's
+ * instantaneous orbital plane. We obtain geocentric Moon vectors slightly
+ * before and after the target instant, rotate both into the SAME true
+ * ecliptic-of-date frame, estimate velocity by central difference, then use
+ * h = r × v. The ascending-node longitude follows from
+ * Ω = atan2(h_x, -h_y).
+ *
+ * This avoids the truncated perturbation series previously used here, which
+ * was close enough for most activations but missed a Human Design line
+ * boundary in Golden Chart #001.
+ */
+export function getTrueNodeLongitude(date: Date): number {
+  const deltaMs = 30 * 60 * 1000; // 30 minutes on each side
+  const before = new Date(date.getTime() - deltaMs);
+  const after = new Date(date.getTime() + deltaMs);
+
+  const r = moonVectorInCommonEclipticFrame(date, date);
+  const rBefore = moonVectorInCommonEclipticFrame(before, date);
+  const rAfter = moonVectorInCommonEclipticFrame(after, date);
+  const v = subtract(rAfter, rBefore);
+  const h = cross(r, v);
+
+  const longitudeRadians = Math.atan2(h.x, -h.y);
+  return normalizeDegrees((longitudeRadians * 180) / Math.PI);
 }
 
 export function getTrueLunarNodes(date: Date): LunarNodePosition {
-  const northNode = getTrueNodeLongitudeFromJulianDate(dateToJulianDate(date));
+  const northNode = getTrueNodeLongitude(date);
   return {
     northNode,
     southNode: normalizeDegrees(northNode + 180),
-    method: "true-node-meeus-perturbation-series",
+    method: "true-node-osculating-orbital-plane",
   };
 }
