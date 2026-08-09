@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { BodyGraph, BODYGRAPH_RENDERER_VERSION } from "@/components/human-design/BodyGraphV2";
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import type { CoreHumanDesignChart } from "@/lib/human-design/topology";
@@ -38,10 +38,12 @@ export default function HumanDesignBodyGraphPage() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState("待命");
 
-  async function calculate(event: FormEvent) {
-    event.preventDefault();
+  async function calculate() {
+    if (loading) return;
     setLoading(true);
+    setStatus("正在送出計算請求…");
     setCopied(false);
     setError(null);
     setResult(null);
@@ -54,6 +56,7 @@ export default function HumanDesignBodyGraphPage() {
         body: JSON.stringify({ localDateTime, timezone }),
       });
 
+      setStatus(`API 已回應（HTTP ${response.status}）`);
       const data = (await response.json()) as CalculationResult;
       if (!response.ok) {
         throw new Error(data.error || `Calculation failed (${response.status})`);
@@ -62,8 +65,11 @@ export default function HumanDesignBodyGraphPage() {
         throw new Error(data.error || "Calculation completed but coreChart was not returned.");
       }
       setResult(data);
+      setStatus("計算完成，BodyGraph 已產生");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown calculation error");
+      const message = err instanceof Error ? err.message : "Unknown calculation error";
+      setError(message);
+      setStatus("計算失敗");
     } finally {
       setLoading(false);
     }
@@ -91,7 +97,7 @@ export default function HumanDesignBodyGraphPage() {
       </section>
 
       <section style={{ ...cardStyle, marginTop: 18 }}>
-        <form onSubmit={calculate} style={{ display: "grid", gap: 16 }}>
+        <div style={{ display: "grid", gap: 16 }}>
           <label style={{ display: "grid", gap: 8 }}>
             <strong style={{ fontSize: 17 }}>出生日期與時間</strong>
             <input
@@ -110,13 +116,15 @@ export default function HumanDesignBodyGraphPage() {
             />
           </label>
           <button
-            type="submit"
+            type="button"
+            onClick={() => void calculate()}
             disabled={loading}
-            style={{ padding: 16, border: 0, borderRadius: 999, background: "#17172d", color: "white", fontWeight: 800, fontSize: 16, opacity: loading ? 0.65 : 1 }}
+            style={{ padding: 16, border: 0, borderRadius: 999, background: "#17172d", color: "white", fontWeight: 800, fontSize: 16, opacity: loading ? 0.65 : 1, cursor: loading ? "wait" : "pointer" }}
           >
             {loading ? "計算中…" : `產生 BodyGraph ${BODYGRAPH_RENDERER_VERSION}`}
           </button>
-        </form>
+          <div style={{ fontSize: 13, color: "#706c67", textAlign: "center" }}>狀態：{status}</div>
+        </div>
 
         {error && (
           <div style={{ marginTop: 16, padding: 14, borderRadius: 14, background: "#fff0ee", border: "1px solid #e8a39a", color: "#9f2e25", lineHeight: 1.55 }}>
