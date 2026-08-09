@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "V14";
+export const BODYGRAPH_RENDERER_VERSION = "V15";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -31,22 +31,20 @@ const CENTER_FILL: Record<CenterId, string> = {
 };
 
 /*
- * V14: reference-relative fixed geometry.
- * The three dense gate clusters called out in review are treated as explicit
- * ordered rails rather than trying to infer label placement from a triangle apex.
- * This mirrors the visual convention in classic BodyGraph software: the gates
- * remain attached to their owning center but are separated enough to read.
+ * V15 uses boundary-first geometry.
+ * Gate coordinates are literal points ON the visible center outline.
+ * This keeps both the gate number and its channel attached to the owning center.
  */
 const CENTER_SHAPES: Record<CenterId, Shape> = {
   Head: { kind: "polygon", points: [{ x: 450, y: 44 }, { x: 405, y: 122 }, { x: 495, y: 122 }] },
   Ajna: { kind: "polygon", points: [{ x: 405, y: 154 }, { x: 495, y: 154 }, { x: 450, y: 226 }] },
   Throat: { kind: "rect", x: 405, y: 258, width: 90, height: 88, rx: 5 },
   G: { kind: "polygon", points: [{ x: 450, y: 382 }, { x: 500, y: 430 }, { x: 450, y: 480 }, { x: 400, y: 430 }] },
-  Ego: { kind: "polygon", points: [{ x: 535, y: 405 }, { x: 510, y: 468 }, { x: 562, y: 468 }] },
-  Spleen: { kind: "polygon", points: [{ x: 212, y: 548 }, { x: 338, y: 605 }, { x: 212, y: 670 }] },
-  "Solar Plexus": { kind: "polygon", points: [{ x: 688, y: 548 }, { x: 562, y: 605 }, { x: 688, y: 670 }] },
+  Ego: { kind: "polygon", points: [{ x: 536, y: 406 }, { x: 510, y: 468 }, { x: 562, y: 468 }] },
+  Spleen: { kind: "polygon", points: [{ x: 194, y: 548 }, { x: 350, y: 608 }, { x: 194, y: 676 }] },
+  "Solar Plexus": { kind: "polygon", points: [{ x: 706, y: 548 }, { x: 550, y: 608 }, { x: 706, y: 676 }] },
   Sacral: { kind: "rect", x: 402, y: 572, width: 96, height: 102, rx: 8 },
-  Root: { kind: "rect", x: 385, y: 760, width: 130, height: 104, rx: 8 },
+  Root: { kind: "rect", x: 370, y: 760, width: 160, height: 104, rx: 8 },
 };
 
 const CENTER_LABELS: Record<CenterId, Point> = {
@@ -55,8 +53,8 @@ const CENTER_LABELS: Record<CenterId, Point> = {
   Throat: { x: 450, y: 302 },
   G: { x: 450, y: 430 },
   Ego: { x: 536, y: 444 },
-  Spleen: { x: 260, y: 612 },
-  "Solar Plexus": { x: 640, y: 612 },
+  Spleen: { x: 247, y: 612 },
+  "Solar Plexus": { x: 653, y: 612 },
   Sacral: { x: 450, y: 625 },
   Root: { x: 450, y: 818 },
 };
@@ -68,10 +66,8 @@ const BODY_SYMBOL: Record<string, string> = {
 };
 
 /*
- * Channel endpoints.
- * Dense Spleen / Solar / Root gates are intentionally spread into ordered rails.
- * These are visual gate anchors, not astronomical data, so the arrangement can
- * follow the conventional BodyGraph drawing without affecting chart calculation.
+ * Exact channel origins on center boundaries.
+ * Spleen/Solar gates now follow the two diagonal edges instead of a detached rail.
  */
 const GATE_PORTS: Record<number, Point> = {
   64: { x: 421, y: 122 }, 61: { x: 450, y: 122 }, 63: { x: 479, y: 122 },
@@ -87,35 +83,40 @@ const GATE_PORTS: Record<number, Point> = {
   10: { x: 400, y: 430 }, 25: { x: 500, y: 430 },
   2: { x: 423, y: 457 }, 15: { x: 450, y: 480 }, 46: { x: 477, y: 457 },
 
-  21: { x: 528, y: 421 }, 51: { x: 514, y: 449 }, 26: { x: 520, y: 468 }, 40: { x: 552, y: 468 },
+  21: { x: 527, y: 427 }, 51: { x: 514, y: 449 }, 26: { x: 520, y: 468 }, 40: { x: 552, y: 468 },
 
-  /* Spleen inner rail: top-to-bottom = 48, 57, 44, 50. */
-  48: { x: 333, y: 574 },
-  57: { x: 338, y: 592 },
-  44: { x: 338, y: 611 },
-  50: { x: 329, y: 630 },
-  32: { x: 292, y: 637 }, 18: { x: 255, y: 652 }, 28: { x: 220, y: 666 },
+  /* Spleen: distribute gates directly on the triangle perimeter. */
+  48: { x: 318, y: 596 },
+  57: { x: 335, y: 602 },
+  44: { x: 336, y: 614 },
+  50: { x: 318, y: 622 },
+  32: { x: 286, y: 636 },
+  18: { x: 247, y: 653 },
+  28: { x: 207, y: 670 },
 
-  /* Solar inner rail mirrors Spleen: top-to-bottom = 36, 22, 37, 6. */
-  36: { x: 567, y: 574 },
-  22: { x: 562, y: 592 },
-  37: { x: 562, y: 611 },
-  6: { x: 571, y: 630 },
-  49: { x: 608, y: 637 }, 55: { x: 645, y: 652 }, 30: { x: 680, y: 666 },
+  /* Solar Plexus mirrors Spleen. */
+  36: { x: 582, y: 596 },
+  22: { x: 565, y: 602 },
+  37: { x: 564, y: 614 },
+  6: { x: 582, y: 622 },
+  49: { x: 614, y: 636 },
+  55: { x: 653, y: 653 },
+  30: { x: 693, y: 670 },
 
   5: { x: 426, y: 572 }, 14: { x: 450, y: 572 }, 29: { x: 474, y: 572 },
   34: { x: 402, y: 594 }, 27: { x: 402, y: 622 }, 59: { x: 402, y: 650 },
   3: { x: 426, y: 674 }, 9: { x: 450, y: 674 }, 42: { x: 474, y: 674 },
 
-  /* Root top rail follows the reference left-to-right order with wider spacing. */
-  54: { x: 391, y: 760 },
-  58: { x: 410, y: 760 },
-  38: { x: 430, y: 760 },
+  /* Root: seven gates evenly distributed on the top edge. */
+  54: { x: 382, y: 760 },
+  58: { x: 405, y: 760 },
+  38: { x: 428, y: 760 },
   60: { x: 450, y: 760 },
-  52: { x: 470, y: 760 },
-  53: { x: 490, y: 760 },
-  19: { x: 509, y: 760 },
-  39: { x: 515, y: 795 }, 41: { x: 515, y: 838 },
+  52: { x: 472, y: 760 },
+  53: { x: 495, y: 760 },
+  19: { x: 518, y: 760 },
+  39: { x: 530, y: 795 },
+  41: { x: 530, y: 838 },
 };
 
 const GATE_CENTER = new Map<number, CenterId>();
@@ -124,13 +125,19 @@ for (const channel of CHANNELS) {
   GATE_CENTER.set(channel.gateB, channel.centerB);
 }
 
+/*
+ * Label positions are slightly inset toward the center so every number visibly
+ * belongs to the shape while the channel starts exactly at the border point.
+ */
 const GATE_LABEL_OVERRIDES: Partial<Record<number, Point>> = {
-  48: { x: 325, y: 568 }, 57: { x: 330, y: 589 }, 44: { x: 330, y: 610 }, 50: { x: 321, y: 631 },
-  36: { x: 575, y: 568 }, 22: { x: 570, y: 589 }, 37: { x: 570, y: 610 }, 6: { x: 579, y: 631 },
-  54: { x: 391, y: 773 }, 58: { x: 410, y: 773 }, 38: { x: 430, y: 773 }, 60: { x: 450, y: 773 },
-  52: { x: 470, y: 773 }, 53: { x: 490, y: 773 }, 19: { x: 509, y: 773 },
-  39: { x: 503, y: 799 }, 41: { x: 503, y: 839 },
-  21: { x: 526, y: 414 }, 51: { x: 511, y: 445 }, 26: { x: 520, y: 478 }, 40: { x: 552, y: 478 },
+  48: { x: 307, y: 594 }, 57: { x: 326, y: 601 }, 44: { x: 326, y: 616 }, 50: { x: 307, y: 624 },
+  36: { x: 593, y: 594 }, 22: { x: 574, y: 601 }, 37: { x: 574, y: 616 }, 6: { x: 593, y: 624 },
+  32: { x: 280, y: 640 }, 18: { x: 243, y: 657 }, 28: { x: 207, y: 671 },
+  49: { x: 620, y: 640 }, 55: { x: 657, y: 657 }, 30: { x: 693, y: 671 },
+  54: { x: 382, y: 773 }, 58: { x: 405, y: 773 }, 38: { x: 428, y: 773 }, 60: { x: 450, y: 773 },
+  52: { x: 472, y: 773 }, 53: { x: 495, y: 773 }, 19: { x: 518, y: 773 },
+  39: { x: 517, y: 798 }, 41: { x: 517, y: 839 },
+  21: { x: 525, y: 418 }, 51: { x: 511, y: 445 }, 26: { x: 520, y: 478 }, 40: { x: 552, y: 478 },
 };
 
 function canonicalChannelId(a: number, b: number) {
@@ -208,8 +215,8 @@ function GateBadge({ gate, source }: { gate: number; source: GateSource }) {
   const p = gateLabelPoint(gate);
   const active = source !== "inactive";
   return <g>
-    <circle cx={p.x} cy={p.y} r={active ? 7.5 : 6.5} fill="#fbfaf7" opacity="0.98" />
-    <text x={p.x} y={p.y + 3.4} textAnchor="middle" fontSize="9.5" fontWeight="900" fill={gateTextColor(source)}>{gate}</text>
+    <circle cx={p.x} cy={p.y} r={active ? 7.2 : 6.2} fill="#fbfaf7" opacity="0.98" />
+    <text x={p.x} y={p.y + 3.2} textAnchor="middle" fontSize="9.2" fontWeight="900" fill={gateTextColor(source)}>{gate}</text>
   </g>;
 }
 
