@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { BodyGraph, BODYGRAPH_RENDERER_VERSION } from "@/components/human-design/BodyGraph";
+import { BodyGraph, BODYGRAPH_RENDERER_VERSION } from "@/components/human-design/BodyGraphV2";
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import type { CoreHumanDesignChart } from "@/lib/human-design/topology";
 
@@ -50,7 +50,7 @@ export default function HumanDesignBodyGraphPage() {
         <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW {BODYGRAPH_RENDERER_VERSION}</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />BodyGraph SVG</h1>
         <p className="lead">
-          {BODYGRAPH_RENDERER_VERSION} 使用固定 Gate-to-Gate 直線 topology，並重新分散 Spleen、Solar Plexus、Ego 與 Root 的 Gate ports，避免密集 Gate 數字互相重疊。
+          {BODYGRAPH_RENDERER_VERSION} 已重建為 edge-derived geometry。Gate 數字直接由 Center 邊界計算，Channel 與 Gate 共用同一個 anchor，不再使用逐點手動補座標。
         </p>
       </section>
 
@@ -74,7 +74,7 @@ export default function HumanDesignBodyGraphPage() {
         <section className="card" style={{ marginTop: 18 }}>
           <h2 style={{ marginTop: 0 }}>BodyGraph Preview {BODYGRAPH_RENDERER_VERSION}</h2>
           <p style={{ marginTop: -4, opacity: 0.68, lineHeight: 1.6 }}>
-            黑色＝Personality，紅色＝Design。Renderer 版本現在直接由 BodyGraph 元件輸出，不再另外手動寫死，因此之後不會再發生畫面顯示舊版本、實際 renderer 已更新的不同步問題。
+            黑色＝Personality，紅色＝Design。這一版改用固定中心骨架、邊界 Gate rails 與單一直線 Gate-to-Gate Channel，優先確保 Gate 相對位置正確、數字不堆疊、通道不要互相打架。
           </p>
           <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
             <BodyGraph
