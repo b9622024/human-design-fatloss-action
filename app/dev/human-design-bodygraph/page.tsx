@@ -47,10 +47,10 @@ export default function HumanDesignBodyGraphPage() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V7</div>
+        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V8</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />BodyGraph SVG</h1>
         <p className="lead">
-          V7 改為 Gate-to-Gate 直接直線連接，不再使用彎曲 rail routing。未啟動 Channel 以較清楚的灰線保留完整拓撲，啟動 Gate 則以黑色／紅色直線覆蓋，讓整體更接近傳統 BodyGraph 的閱讀方式。
+          V8 重新調整九大中心的比例與位置：Ego 往中央靠近，Spleen／Solar Plexus 向左右外擴，並把 64 個 Gate 固定在各 Center 的實際邊緣。Channel 仍採 Gate-to-Gate 直線，藉由幾何重排減少交叉與線條打架。
         </p>
       </section>
 
@@ -65,16 +65,16 @@ export default function HumanDesignBodyGraphPage() {
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ padding: 14, borderRadius: 12, border: "1px solid #d9d4ca", fontSize: 16 }} />
           </label>
           <button type="submit" disabled={loading} style={{ padding: 15, border: 0, borderRadius: 999, background: "#17172d", color: "white", fontWeight: 700, fontSize: 15 }}>
-            {loading ? "計算中…" : "產生 BodyGraph V7"}
+            {loading ? "計算中…" : "產生 BodyGraph V8"}
           </button>
         </form>
       </section>
 
       {result?.coreChart && (
         <section className="card" style={{ marginTop: 18 }}>
-          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V7</h2>
+          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V8</h2>
           <p style={{ marginTop: -4, opacity: 0.68, lineHeight: 1.6 }}>
-            黑色＝Personality，紅色＝Design。V7 使用直接 Gate-to-Gate 直線連接；完整 Channel 由兩端 Gate 連到中點，Hanging Gate 顯示較長的直線半通道，灰色背景線則清楚保留全部 Channel topology。
+            黑色＝Personality，紅色＝Design。V8 的重點不是改運算，而是重建 BodyGraph 幾何：中心位置更接近傳統比例，每個 Gate 數字都直接依附在 Center 邊界，直線 Channel 從 Gate Port 到 Gate Port。
           </p>
           <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
             <BodyGraph
