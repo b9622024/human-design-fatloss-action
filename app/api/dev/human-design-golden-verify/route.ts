@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
     if (candidates.length === 0) {
       return NextResponse.json({ error: "At least one candidate is required" }, { status: 400 });
     }
-    if (candidates.length > 8) {
-      return NextResponse.json({ error: "A maximum of 8 candidates may be verified per request" }, { status: 400 });
+    if (candidates.length > 9) {
+      return NextResponse.json({ error: "A maximum of 9 candidates may be verified per request" }, { status: 400 });
     }
 
     const results = [];
