@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { BodyGraph } from "@/components/human-design/BodyGraph";
+import { BodyGraph, BODYGRAPH_RENDERER_VERSION } from "@/components/human-design/BodyGraph";
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import type { CoreHumanDesignChart } from "@/lib/human-design/topology";
 
@@ -47,10 +47,10 @@ export default function HumanDesignBodyGraphPage() {
   return (
     <main className="page-shell">
       <section className="hero-card">
-        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW V11</div>
+        <div className="eyebrow">BODYGRAPH DEVELOPMENT PREVIEW {BODYGRAPH_RENDERER_VERSION}</div>
         <h1 style={{ fontSize: "clamp(34px,6vw,58px)" }}>Human Design<br />BodyGraph SVG</h1>
         <p className="lead">
-          V11 移除所有折線與彎曲 routing。36 條 Channel 全部改成 Gate-to-Gate 單一直線，並重新拉開 Head、Ajna、Throat、G、Sacral、Root 與左右中心的距離，降低線條與 Gate 數字擠在一起的情況。
+          {BODYGRAPH_RENDERER_VERSION} 使用固定 Gate-to-Gate 直線 topology，並重新分散 Spleen、Solar Plexus、Ego 與 Root 的 Gate ports，避免密集 Gate 數字互相重疊。
         </p>
       </section>
 
@@ -65,16 +65,16 @@ export default function HumanDesignBodyGraphPage() {
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ padding: 14, borderRadius: 12, border: "1px solid #d9d4ca", fontSize: 16 }} />
           </label>
           <button type="submit" disabled={loading} style={{ padding: 15, border: 0, borderRadius: 999, background: "#17172d", color: "white", fontWeight: 700, fontSize: 15 }}>
-            {loading ? "計算中…" : "產生 BodyGraph V11"}
+            {loading ? "計算中…" : `產生 BodyGraph ${BODYGRAPH_RENDERER_VERSION}`}
           </button>
         </form>
       </section>
 
       {result?.coreChart && (
         <section className="card" style={{ marginTop: 18 }}>
-          <h2 style={{ marginTop: 0 }}>BodyGraph Preview V11</h2>
+          <h2 style={{ marginTop: 0 }}>BodyGraph Preview {BODYGRAPH_RENDERER_VERSION}</h2>
           <p style={{ marginTop: -4, opacity: 0.68, lineHeight: 1.6 }}>
-            黑色＝Personality，紅色＝Design。V11 全部 Channel 都是單一直線，沒有 waypoint、curve 或 polyline；中心間距也放大，Gate 數字仍固定在各自 Center 邊界內側。
+            黑色＝Personality，紅色＝Design。Renderer 版本現在直接由 BodyGraph 元件輸出，不再另外手動寫死，因此之後不會再發生畫面顯示舊版本、實際 renderer 已更新的不同步問題。
           </p>
           <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
             <BodyGraph
