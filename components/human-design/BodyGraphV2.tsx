@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "GEOMETRY-2.0";
+export const BODYGRAPH_RENDERER_VERSION = "REFERENCE-MAPPED-1.0";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -37,299 +37,196 @@ const CENTER_FILL: Record<CenterId, string> = {
 };
 
 /*
- * Geometry 2.0
+ * Reference-Mapped 1.0
+ * --------------------
+ * The visual layer is now authored independently from chart calculation.
+ * 1) centers use a fixed reference skeleton;
+ * 2) every gate owns a fixed anchor;
+ * 3) every channel owns an explicit SVG route;
+ * 4) activation only changes stroke colour/visibility, never geometry.
  *
- * This renderer no longer derives gate placement from a generic center box.
- * Every center and every gate port is authored against one fixed reference
- * coordinate system. Channel rails use those ports, while labels are inset
- * independently so dense gates can remain readable without moving the rail.
+ * This intentionally replaces the former "connect two gate points with a
+ * straight line" renderer, which produced unavoidable intersections.
  */
 const SHAPES: Record<CenterId, Shape> = {
-  Head: { kind: "polygon", points: [{ x: 450, y: 55 }, { x: 405, y: 132 }, { x: 495, y: 132 }] },
-  Ajna: { kind: "polygon", points: [{ x: 405, y: 154 }, { x: 495, y: 154 }, { x: 450, y: 225 }] },
-  Throat: { kind: "rect", x: 405, y: 250, width: 90, height: 84, rx: 4 },
-  G: { kind: "polygon", points: [{ x: 450, y: 352 }, { x: 492, y: 394 }, { x: 450, y: 436 }, { x: 408, y: 394 }] },
-  Ego: { kind: "polygon", points: [{ x: 525, y: 365 }, { x: 505, y: 420 }, { x: 555, y: 420 }] },
-  Spleen: { kind: "polygon", points: [{ x: 285, y: 432 }, { x: 395, y: 492 }, { x: 285, y: 552 }] },
-  "Solar Plexus": { kind: "polygon", points: [{ x: 615, y: 432 }, { x: 505, y: 492 }, { x: 615, y: 552 }] },
-  Sacral: { kind: "rect", x: 405, y: 468, width: 90, height: 92, rx: 4 },
-  Root: { kind: "rect", x: 385, y: 590, width: 130, height: 88, rx: 4 },
+  Head: { kind: "polygon", points: [{ x: 450, y: 46 }, { x: 408, y: 118 }, { x: 492, y: 118 }] },
+  Ajna: { kind: "polygon", points: [{ x: 408, y: 142 }, { x: 492, y: 142 }, { x: 450, y: 210 }] },
+  Throat: { kind: "rect", x: 408, y: 238, width: 84, height: 78, rx: 4 },
+  G: { kind: "polygon", points: [{ x: 450, y: 336 }, { x: 488, y: 374 }, { x: 450, y: 412 }, { x: 412, y: 374 }] },
+  Ego: { kind: "polygon", points: [{ x: 520, y: 348 }, { x: 502, y: 398 }, { x: 548, y: 398 }] },
+  Spleen: { kind: "polygon", points: [{ x: 306, y: 402 }, { x: 392, y: 456 }, { x: 306, y: 510 }] },
+  "Solar Plexus": { kind: "polygon", points: [{ x: 594, y: 402 }, { x: 508, y: 456 }, { x: 594, y: 510 }] },
+  Sacral: { kind: "rect", x: 410, y: 438, width: 80, height: 82, rx: 4 },
+  Root: { kind: "rect", x: 405, y: 554, width: 90, height: 82, rx: 4 },
 };
 
 const CENTER_LABEL: Record<CenterId, Point> = {
-  Head: { x: 450, y: 96 },
-  Ajna: { x: 450, y: 190 },
-  Throat: { x: 450, y: 294 },
-  G: { x: 450, y: 400 },
-  Ego: { x: 532, y: 399 },
-  Spleen: { x: 330, y: 498 },
-  "Solar Plexus": { x: 570, y: 498 },
-  Sacral: { x: 450, y: 518 },
-  Root: { x: 450, y: 640 },
+  Head: { x: 450, y: 84 },
+  Ajna: { x: 450, y: 174 },
+  Throat: { x: 450, y: 279 },
+  G: { x: 450, y: 380 },
+  Ego: { x: 526, y: 382 },
+  Spleen: { x: 342, y: 460 },
+  "Solar Plexus": { x: 558, y: 460 },
+  Sacral: { x: 450, y: 482 },
+  Root: { x: 450, y: 600 },
 };
 
-/* Exact rail endpoints on the visible center boundary. */
-const PORT: Record<number, Point> = {
-  // Head bottom edge
-  64: { x: 420, y: 132 }, 61: { x: 450, y: 132 }, 63: { x: 480, y: 132 },
-
-  // Ajna top, sides, apex
-  47: { x: 420, y: 154 }, 24: { x: 450, y: 154 }, 4: { x: 480, y: 154 },
-  17: { x: 420, y: 178 }, 43: { x: 450, y: 225 }, 11: { x: 480, y: 178 },
-
-  // Throat perimeter
-  62: { x: 423, y: 250 }, 23: { x: 450, y: 250 }, 56: { x: 477, y: 250 },
-  16: { x: 405, y: 268 }, 20: { x: 405, y: 312 },
-  45: { x: 495, y: 268 }, 12: { x: 495, y: 290 }, 35: { x: 495, y: 312 },
-  31: { x: 423, y: 334 }, 8: { x: 450, y: 334 }, 33: { x: 477, y: 334 },
-
-  // G perimeter
-  7: { x: 450, y: 352 }, 1: { x: 429, y: 373 }, 13: { x: 471, y: 373 },
-  10: { x: 408, y: 394 }, 25: { x: 492, y: 394 },
-  2: { x: 429, y: 415 }, 46: { x: 471, y: 415 }, 15: { x: 450, y: 436 },
-
-  // Ego perimeter
-  21: { x: 520, y: 379 }, 51: { x: 511, y: 400 }, 26: { x: 510, y: 420 }, 40: { x: 548, y: 420 },
-
-  // Spleen: inner point and gates spread down the lower edge
-  48: { x: 365, y: 476 }, 57: { x: 395, y: 492 }, 44: { x: 376, y: 502 },
-  50: { x: 356, y: 513 }, 32: { x: 335, y: 525 }, 18: { x: 313, y: 537 }, 28: { x: 287, y: 551 },
-
-  // Solar Plexus mirrors the Spleen geometry
-  36: { x: 535, y: 476 }, 22: { x: 505, y: 492 }, 37: { x: 524, y: 502 },
-  6: { x: 544, y: 513 }, 49: { x: 565, y: 525 }, 55: { x: 587, y: 537 }, 30: { x: 613, y: 551 },
-
-  // Sacral perimeter
-  5: { x: 423, y: 468 }, 14: { x: 450, y: 468 }, 29: { x: 477, y: 468 },
-  34: { x: 405, y: 488 }, 27: { x: 405, y: 514 }, 59: { x: 405, y: 540 },
-  3: { x: 423, y: 560 }, 9: { x: 450, y: 560 }, 42: { x: 477, y: 560 },
-
-  // Root: seven top gates evenly distributed, two right-side gates
-  54: { x: 395, y: 590 }, 58: { x: 413, y: 590 }, 38: { x: 431, y: 590 },
-  60: { x: 450, y: 590 }, 52: { x: 469, y: 590 }, 53: { x: 487, y: 590 }, 19: { x: 505, y: 590 },
-  39: { x: 515, y: 625 }, 41: { x: 515, y: 660 },
+/* Gate label anchors. These are visual slots, not channel routing points. */
+const GATE: Record<number, Point> = {
+  64:{x:422,y:114},61:{x:450,y:114},63:{x:478,y:114},
+  47:{x:422,y:147},24:{x:450,y:147},4:{x:478,y:147},17:{x:420,y:166},43:{x:450,y:205},11:{x:480,y:166},
+  62:{x:425,y:244},23:{x:450,y:244},56:{x:475,y:244},16:{x:413,y:258},20:{x:413,y:294},45:{x:487,y:258},12:{x:487,y:277},35:{x:487,y:297},31:{x:425,y:310},8:{x:450,y:310},33:{x:475,y:310},
+  7:{x:450,y:342},1:{x:430,y:356},13:{x:470,y:356},10:{x:416,y:374},25:{x:484,y:374},2:{x:431,y:394},46:{x:469,y:394},15:{x:450,y:407},
+  21:{x:516,y:359},51:{x:507,y:377},26:{x:510,y:394},40:{x:541,y:394},
+  48:{x:385,y:442},57:{x:391,y:455},44:{x:376,y:465},50:{x:361,y:475},32:{x:345,y:485},18:{x:329,y:495},28:{x:312,y:505},
+  36:{x:515,y:442},22:{x:509,y:455},37:{x:524,y:465},6:{x:539,y:475},49:{x:555,y:485},55:{x:571,y:495},30:{x:588,y:505},
+  5:{x:426,y:444},14:{x:450,y:444},29:{x:474,y:444},34:{x:416,y:458},27:{x:416,y:480},59:{x:416,y:504},3:{x:426,y:514},9:{x:450,y:514},42:{x:474,y:514},
+  54:{x:414,y:560},58:{x:426,y:560},38:{x:438,y:560},60:{x:450,y:560},52:{x:462,y:560},53:{x:474,y:560},19:{x:486,y:560},39:{x:489,y:585},41:{x:489,y:615},
 };
 
-/* Label anchors are separate from channel endpoints. */
-const GATE_LABEL: Record<number, Point> = {
-  64: { x: 420, y: 125 }, 61: { x: 450, y: 125 }, 63: { x: 480, y: 125 },
-  47: { x: 420, y: 162 }, 24: { x: 450, y: 162 }, 4: { x: 480, y: 162 },
-  17: { x: 427, y: 180 }, 43: { x: 450, y: 216 }, 11: { x: 473, y: 180 },
+/*
+ * Explicit channel rails. Each route is hand-authored against the same fixed
+ * skeleton so parallel corridors stay parallel and major families do not
+ * collapse onto one another.
+ */
+const CHANNEL_PATH: Record<string, string> = {
+  "47-64":"M422 118 L422 142",
+  "24-61":"M450 118 L450 142",
+  "4-63":"M478 118 L478 142",
+  "17-62":"M420 176 L420 232 L425 238",
+  "23-43":"M450 210 L450 238",
+  "11-56":"M480 176 L480 232 L475 238",
 
-  62: { x: 423, y: 258 }, 23: { x: 450, y: 258 }, 56: { x: 477, y: 258 },
-  16: { x: 413, y: 269 }, 20: { x: 413, y: 312 },
-  45: { x: 487, y: 269 }, 12: { x: 487, y: 290 }, 35: { x: 487, y: 311 },
-  31: { x: 423, y: 326 }, 8: { x: 450, y: 326 }, 33: { x: 477, y: 326 },
+  "16-48":"M408 258 L385 442",
+  "20-57":"M408 292 L398 362 L391 455",
+  "10-20":"M408 292 L408 338 L416 374",
+  "20-34":"M408 292 L397 366 L397 438 L410 458",
+  "12-22":"M492 277 L503 360 L509 455",
+  "35-36":"M492 297 L508 370 L515 442",
+  "21-45":"M492 258 L510 258 L516 359",
+  "7-31":"M425 316 L438 330 L450 336",
+  "8-1":"M450 316 L444 337 L430 356",
+  "13-33":"M475 316 L462 330 L470 356",
 
-  7: { x: 450, y: 360 }, 1: { x: 435, y: 377 }, 13: { x: 465, y: 377 },
-  10: { x: 418, y: 394 }, 25: { x: 482, y: 394 },
-  2: { x: 435, y: 411 }, 46: { x: 465, y: 411 }, 15: { x: 450, y: 427 },
+  "2-14":"M431 394 L431 428 L450 438",
+  "5-15":"M426 438 L438 426 L450 412",
+  "29-46":"M474 438 L466 426 L469 394",
+  "10-34":"M416 374 L403 404 L410 458",
+  "34-57":"M410 458 L400 458 L391 455",
+  "27-50":"M410 480 L385 480 L361 475",
 
-  21: { x: 522, y: 381 }, 51: { x: 518, y: 400 }, 26: { x: 517, y: 412 }, 40: { x: 541, y: 412 },
+  "32-54":"M345 485 L365 520 L414 554",
+  "18-58":"M329 495 L365 535 L426 554",
+  "28-38":"M312 505 L360 547 L438 554",
+  "3-60":"M426 520 L438 538 L450 554",
+  "9-52":"M450 520 L456 538 L462 554",
+  "42-53":"M474 520 L474 538 L474 554",
 
-  48: { x: 358, y: 472 }, 57: { x: 385, y: 492 }, 44: { x: 366, y: 498 },
-  50: { x: 347, y: 508 }, 32: { x: 328, y: 520 }, 18: { x: 307, y: 532 }, 28: { x: 294, y: 544 },
+  "19-49":"M486 554 L520 532 L555 485",
+  "39-55":"M495 585 L532 548 L571 495",
+  "30-41":"M495 615 L548 570 L588 505",
 
-  36: { x: 542, y: 472 }, 22: { x: 515, y: 492 }, 37: { x: 534, y: 498 },
-  6: { x: 553, y: 508 }, 49: { x: 572, y: 520 }, 55: { x: 593, y: 532 }, 30: { x: 606, y: 544 },
-
-  5: { x: 423, y: 477 }, 14: { x: 450, y: 477 }, 29: { x: 477, y: 477 },
-  34: { x: 414, y: 490 }, 27: { x: 414, y: 514 }, 59: { x: 414, y: 538 },
-  3: { x: 423, y: 551 }, 9: { x: 450, y: 551 }, 42: { x: 477, y: 551 },
-
-  54: { x: 395, y: 599 }, 58: { x: 413, y: 599 }, 38: { x: 431, y: 599 },
-  60: { x: 450, y: 599 }, 52: { x: 469, y: 599 }, 53: { x: 487, y: 599 }, 19: { x: 505, y: 599 },
-  39: { x: 506, y: 625 }, 41: { x: 506, y: 660 },
+  "25-51":"M484 374 L496 374 L507 377",
+  "26-44":"M510 394 L470 430 L420 452 L376 465",
+  "37-40":"M541 394 L545 430 L524 465",
+  "10-57":"M416 374 L400 410 L391 455",
+  "6-59":"M416 504 L450 500 L500 490 L539 475",
 };
 
-function canonical(a: number, b: number) {
-  return `${Math.min(a, b)}-${Math.max(a, b)}`;
+function canonical(a:number,b:number){return `${Math.min(a,b)}-${Math.max(a,b)}`;}
+
+function gateSource(gate:number, personality:Set<number>, design:Set<number>):GateSource{
+  const p=personality.has(gate); const d=design.has(gate);
+  if(p&&d)return "both"; if(p)return "personality"; if(d)return "design"; return "inactive";
 }
 
-function gateSource(gate: number, personality: Set<number>, design: Set<number>): GateSource {
-  const p = personality.has(gate);
-  const d = design.has(gate);
-  if (p && d) return "both";
-  if (p) return "personality";
-  if (d) return "design";
-  return "inactive";
+function renderCenter(center:CenterId, defined:boolean){
+  const s=SHAPES[center];
+  const common={fill:defined?CENTER_FILL[center]:"#fff",stroke:"#171720",strokeWidth:2.6};
+  if(s.kind==="rect") return <rect x={s.x} y={s.y} width={s.width} height={s.height} rx={s.rx} {...common}/>;
+  return <polygon points={s.points.map(p=>`${p.x},${p.y}`).join(" ")} {...common}/>;
 }
 
-function renderCenter(center: CenterId, defined: boolean) {
-  const s = SHAPES[center];
-  const common = { fill: defined ? CENTER_FILL[center] : "#fff", stroke: "#171720", strokeWidth: 3.1 };
-  if (s.kind === "rect") {
-    return <rect x={s.x} y={s.y} width={s.width} height={s.height} rx={s.rx} {...common} />;
-  }
-  return <polygon points={s.points.map((p) => `${p.x},${p.y}`).join(" ")} {...common} />;
+function GateLabel({gate,source}:{gate:number;source:GateSource}){
+  const p=GATE[gate]; if(!p)return null;
+  const fill=source==="design"?"#d64a42":source==="both"?"#9d3833":source==="personality"?"#171720":"#68645e";
+  return <g>
+    <circle cx={p.x} cy={p.y} r="6.5" fill="#fbfaf7" opacity="0.98"/>
+    <text x={p.x} y={p.y+2.7} textAnchor="middle" fontSize="7.6" fontWeight="900" fill={fill}>{gate}</text>
+  </g>;
 }
 
-function GateLabel({ gate, source }: { gate: number; source: GateSource }) {
-  const p = GATE_LABEL[gate];
-  if (!p) return null;
-  const fill = source === "design" ? "#d34a42" : source === "both" ? "#9c3933" : source === "personality" ? "#171720" : "#625f5a";
-  return (
+function ActivePath({d,aSource,bSource}:{d:string;aSource:GateSource;bSource:GateSource}){
+  const color=(s:GateSource)=>s==="design"?"#d64a42":"#171720";
+  if(aSource==="inactive"&&bSource==="inactive")return null;
+  return <g>
+    {aSource!=="inactive"&&<path d={d} pathLength={100} fill="none" stroke={color(aSource)} strokeWidth="5.6" strokeLinecap="butt" strokeDasharray="50 50"/>}
+    {bSource!=="inactive"&&<path d={d} pathLength={100} fill="none" stroke={color(bSource)} strokeWidth="5.6" strokeLinecap="butt" strokeDasharray="50 50" strokeDashoffset="-50"/>}
+  </g>;
+}
+
+function HangingPath({d,source,fromEnd=false}:{d:string;source:GateSource;fromEnd?:boolean}){
+  if(source==="inactive")return null;
+  const stroke=source==="design"?"#d64a42":"#171720";
+  return <path d={d} pathLength={100} fill="none" stroke={stroke} strokeWidth="5.6" strokeLinecap="butt" strokeDasharray="17 83" strokeDashoffset={fromEnd?"-83":"0"}/>;
+}
+
+function ActivationPanel({x,title,color,activations,align}:{x:number;title:string;color:string;activations:HumanDesignActivation[];align:"left"|"right"}){
+  return <g>
+    <text x={x} y="40" textAnchor={align==="left"?"start":"end"} fontSize="15" fontWeight="800" fill={color}>{title}</text>
+    {activations.map((a,i)=>{const y=65+i*24; return <g key={`${title}-${a.body}`}>
+      <text x={x} y={y} textAnchor={align==="left"?"start":"end"} fontSize="13" fontWeight="700" fill={color}>{BODY_SYMBOL[a.body]??"•"}</text>
+      <text x={x+(align==="left"?20:-20)} y={y} textAnchor={align==="left"?"start":"end"} fontSize="12" fontWeight="700" fill="#24232e">{a.gate}.{a.line}</text>
+    </g>;})}
+  </g>;
+}
+
+export function BodyGraph({chart,personalityActivations=[],designActivations=[],width=900}:Props){
+  const defined=new Set(chart.centers);
+  const activeChannels=new Set(chart.channels.map(id=>{const [a,b]=id.split("-").map(Number);return canonical(a,b);}));
+  const personality=new Set(personalityActivations.map(a=>a.gate));
+  const design=new Set(designActivations.map(a=>a.gate));
+
+  return <svg viewBox="0 0 900 670" width="100%" style={{maxWidth:width,height:"auto"}} role="img" aria-label="Human Design BodyGraph">
+    <rect width="900" height="670" rx="22" fill="#fbfaf7"/>
+    <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left"/>
+    <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right"/>
+
+    {/* Fixed reference rails. */}
     <g>
-      <circle cx={p.x} cy={p.y} r="7.6" fill="#fbfaf7" opacity="0.96" />
-      <text
-        x={p.x}
-        y={p.y + 3.2}
-        textAnchor="middle"
-        fontSize="8.5"
-        fontWeight="900"
-        fill={fill}
-      >
-        {gate}
-      </text>
-    </g>
-  );
-}
-
-function ActiveSegment({ a, b, source }: { a: Point; b: Point; source: GateSource }) {
-  if (source === "inactive") return null;
-  if (source === "both") {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const ox = (-dy / len) * 1.7;
-    const oy = (dx / len) * 1.7;
-    return (
-      <g>
-        <line x1={a.x + ox} y1={a.y + oy} x2={b.x + ox} y2={b.y + oy} stroke="#171720" strokeWidth="3.4" strokeLinecap="butt" />
-        <line x1={a.x - ox} y1={a.y - oy} x2={b.x - ox} y2={b.y - oy} stroke="#d34a42" strokeWidth="3.4" strokeLinecap="butt" />
-      </g>
-    );
-  }
-  return (
-    <line
-      x1={a.x}
-      y1={a.y}
-      x2={b.x}
-      y2={b.y}
-      stroke={source === "design" ? "#d34a42" : "#171720"}
-      strokeWidth="6"
-      strokeLinecap="butt"
-    />
-  );
-}
-
-function ActivationPanel({
-  x,
-  title,
-  color,
-  activations,
-  align,
-}: {
-  x: number;
-  title: string;
-  color: string;
-  activations: HumanDesignActivation[];
-  align: "left" | "right";
-}) {
-  return (
-    <g>
-      <text x={x} y="44" textAnchor={align === "left" ? "start" : "end"} fontSize="17" fontWeight="800" fill={color}>{title}</text>
-      {activations.map((a, i) => {
-        const y = 72 + i * 26;
-        return (
-          <g key={`${title}-${a.body}`}>
-            <text x={x} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="15" fontWeight="700" fill={color}>{BODY_SYMBOL[a.body] ?? "•"}</text>
-            <text x={x + (align === "left" ? 22 : -22)} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="13" fontWeight="700" fill="#24232e">{a.gate}.{a.line}</text>
-          </g>
-        );
+      {CHANNELS.map(c=>{
+        const id=canonical(c.gateA,c.gateB); const d=CHANNEL_PATH[id]; if(!d)return null;
+        return <g key={`rail-${id}`}>
+          <path d={d} fill="none" stroke="#ffffff" strokeWidth="6.6" strokeLinecap="butt" strokeLinejoin="round"/>
+          <path d={d} fill="none" stroke="#b5b1aa" strokeWidth="1.8" strokeLinecap="butt" strokeLinejoin="round"/>
+        </g>;
       })}
     </g>
-  );
-}
 
-export function BodyGraph({ chart, personalityActivations = [], designActivations = [], width = 900 }: Props) {
-  const defined = new Set(chart.centers);
-  const activeChannels = new Set(
-    chart.channels.map((id) => {
-      const [a, b] = id.split("-").map(Number);
-      return canonical(a, b);
-    }),
-  );
-  const personality = new Set(personalityActivations.map((a) => a.gate));
-  const design = new Set(designActivations.map((a) => a.gate));
+    {/* Activation is paint only; geometry never changes. */}
+    <g>
+      {CHANNELS.map(c=>{
+        const id=canonical(c.gateA,c.gateB); const d=CHANNEL_PATH[id]; if(!d)return null;
+        const sa=gateSource(c.gateA,personality,design); const sb=gateSource(c.gateB,personality,design);
+        if(activeChannels.has(id)) return <ActivePath key={`active-${id}`} d={d} aSource={sa} bSource={sb}/>;
+        return <g key={`hang-${id}`}><HangingPath d={d} source={sa}/><HangingPath d={d} source={sb} fromEnd/></g>;
+      })}
+    </g>
 
-  return (
-    <svg viewBox="0 0 900 720" width="100%" style={{ maxWidth: width, height: "auto" }} role="img" aria-label="Human Design BodyGraph">
-      <rect width="900" height="720" rx="24" fill="#fbfaf7" />
-      <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left" />
-      <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right" />
+    {/* Centers sit above rails, exactly like a printed circuit diagram. */}
+    <g>
+      {(Object.keys(SHAPES) as CenterId[]).map(center=><g key={center}>
+        {renderCenter(center,defined.has(center))}
+        <text x={CENTER_LABEL[center].x} y={CENTER_LABEL[center].y+4} textAnchor="middle" fontSize="14" fontWeight="800" fill="#191820">{center==="Solar Plexus"?"Solar":center}</text>
+      </g>)}
+    </g>
 
-      {/* Every channel gets a white outer rail and a darker inner rail. This keeps intersections legible. */}
-      <g>
-        {CHANNELS.map((c) => {
-          const a = PORT[c.gateA];
-          const b = PORT[c.gateB];
-          if (!a || !b) return null;
-          return (
-            <g key={`rail-${c.id}`}>
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#ffffff" strokeWidth="7.2" />
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#a7a39d" strokeWidth="2.1" />
-            </g>
-          );
-        })}
-      </g>
+    <g>{Object.keys(GATE).map(g=>{const gate=Number(g);return <GateLabel key={gate} gate={gate} source={gateSource(gate,personality,design)}/>;})}</g>
 
-      {/* Active channels and hanging gates. */}
-      <g>
-        {CHANNELS.map((c) => {
-          const a = PORT[c.gateA];
-          const b = PORT[c.gateB];
-          if (!a || !b) return null;
-          const id = canonical(c.gateA, c.gateB);
-          const sa = gateSource(c.gateA, personality, design);
-          const sb = gateSource(c.gateB, personality, design);
-
-          if (activeChannels.has(id)) {
-            const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-            return (
-              <g key={`active-${id}`}>
-                <ActiveSegment a={a} b={mid} source={sa} />
-                <ActiveSegment a={b} b={mid} source={sb} />
-              </g>
-            );
-          }
-
-          const fraction = 0.16;
-          const aEnd = { x: a.x + (b.x - a.x) * fraction, y: a.y + (b.y - a.y) * fraction };
-          const bEnd = { x: b.x + (a.x - b.x) * fraction, y: b.y + (a.y - b.y) * fraction };
-          return (
-            <g key={`hanging-${id}`}>
-              <ActiveSegment a={a} b={aEnd} source={sa} />
-              <ActiveSegment a={b} b={bEnd} source={sb} />
-            </g>
-          );
-        })}
-      </g>
-
-      {/* Centers mask rail interiors so channels visually terminate on the boundary. */}
-      <g>
-        {(Object.keys(SHAPES) as CenterId[]).map((center) => (
-          <g key={center}>
-            {renderCenter(center, defined.has(center))}
-            <text x={CENTER_LABEL[center].x} y={CENTER_LABEL[center].y + 5} textAnchor="middle" fontSize="15.5" fontWeight="800" fill="#191820">
-              {center === "Solar Plexus" ? "Solar" : center}
-            </text>
-          </g>
-        ))}
-      </g>
-
-      {/* Gate labels are drawn last and have their own anchors, independent of channel ports. */}
-      <g>
-        {Object.keys(GATE_LABEL).map((gateText) => {
-          const gate = Number(gateText);
-          return <GateLabel key={gate} gate={gate} source={gateSource(gate, personality, design)} />;
-        })}
-      </g>
-
-      <g transform="translate(450 696)">
-        <rect x="-245" y="-20" width="490" height="30" rx="15" fill="#fff" stroke="#ddd8cf" />
-        <text x="0" y="0" textAnchor="middle" fontSize="13.5" fontWeight="700" fill="#5a5650">{chart.type} · {chart.authority} · {chart.profile} · {chart.definition}</text>
-      </g>
-    </svg>
-  );
+    <g transform="translate(450 652)">
+      <rect x="-220" y="-18" width="440" height="27" rx="13.5" fill="#fff" stroke="#ddd8cf"/>
+      <text x="0" y="0" textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#5a5650">{chart.type} · {chart.authority} · {chart.profile} · {chart.definition}</text>
+    </g>
+  </svg>;
 }
