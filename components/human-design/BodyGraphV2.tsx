@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.1";
+export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.2";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -31,13 +31,11 @@ const CENTER_FILL:Record<CenterId,string> = {
 };
 
 /*
- * CANONICAL-SLOTS 1.1
- * -------------------
+ * CANONICAL-SLOTS 1.2
  * Fixed center geometry + fixed boundary gate slots.
- * The two lower triangles intentionally concentrate their connection gates
- * around the inward-facing apex, matching the reference BodyGraph topology.
- * Root side-gate ordering mirrors the corresponding Spleen/Solar families so
- * the long lower channels remain parallel instead of crossing one another.
+ * Lower triangle gates are concentrated around the inward apex and Root side
+ * gates mirror the corresponding Spleen/Solar order. This preserves the visual
+ * fan and prevents the three lower channel families from crossing each other.
  */
 const SHAPES:Record<CenterId,Shape> = {
   Head:{kind:"polygon",points:[{x:450,y:42},{x:408,y:112},{x:492,y:112}]},
@@ -58,44 +56,38 @@ const CENTER_LABEL:Record<CenterId,Point> = {
 };
 
 const GATE:Record<number,Point> = {
-  /* Head */
   64:{x:424,y:112}, 61:{x:450,y:112}, 63:{x:476,y:112},
 
-  /* Ajna */
   47:{x:424,y:138}, 24:{x:450,y:138}, 4:{x:476,y:138},
   17:{x:416,y:153}, 11:{x:484,y:153}, 43:{x:450,y:208},
 
-  /* Throat */
   62:{x:425,y:244}, 23:{x:450,y:244}, 56:{x:475,y:244},
   16:{x:407,y:262}, 20:{x:407,y:303},
   45:{x:493,y:262}, 12:{x:493,y:282}, 35:{x:493,y:303},
   31:{x:425,y:326}, 8:{x:450,y:326}, 33:{x:475,y:326},
 
-  /* G diamond */
   7:{x:450,y:352}, 1:{x:423,y:379}, 13:{x:477,y:379},
   10:{x:408,y:394}, 25:{x:492,y:394},
   2:{x:423,y:421}, 46:{x:477,y:421}, 15:{x:450,y:436},
 
-  /* Ego, pulled inward to match the compact reference placement */
   21:{x:516,y:354}, 51:{x:505,y:394}, 26:{x:507,y:412}, 40:{x:542,y:412},
 
-  /* Spleen: upper-family gates cluster toward the inward apex. */
-  48:{x:342,y:485}, 57:{x:360,y:494}, 44:{x:378,y:504},
-  50:{x:372,y:519}, 32:{x:332,y:540}, 18:{x:296,y:559}, 28:{x:260,y:577},
+  /* Spleen: connection-heavy gates kept near inward apex in reference order. */
+  48:{x:337,y:483}, 57:{x:356,y:493}, 44:{x:377,y:504},
+  50:{x:374,y:518}, 32:{x:338,y:537}, 18:{x:299,y:557}, 28:{x:260,y:577},
 
-  /* Solar Plexus: exact mirror of Spleen. */
-  36:{x:558,y:485}, 22:{x:540,y:494}, 37:{x:522,y:504},
-  6:{x:528,y:519}, 49:{x:568,y:540}, 55:{x:604,y:559}, 30:{x:640,y:577},
+  /* Solar Plexus mirrors Spleen exactly. */
+  36:{x:563,y:483}, 22:{x:544,y:493}, 37:{x:523,y:504},
+  6:{x:526,y:518}, 49:{x:562,y:537}, 55:{x:601,y:557}, 30:{x:640,y:577},
 
-  /* Sacral */
   5:{x:426,y:492}, 14:{x:450,y:492}, 29:{x:474,y:492},
   34:{x:408,y:510}, 27:{x:408,y:536}, 59:{x:408,y:562},
   3:{x:426,y:580}, 9:{x:450,y:580}, 42:{x:474,y:580},
 
-  /* Root: left side order follows Spleen pair order 32→54, 18→58, 28→38. */
-  54:{x:397,y:666}, 58:{x:397,y:688}, 38:{x:397,y:711},
+  /* Preserve vertical pair ordering so lower-left rails are parallel. */
+  54:{x:397,y:666}, 58:{x:397,y:689}, 38:{x:397,y:712},
   53:{x:424,y:646}, 60:{x:450,y:646}, 52:{x:476,y:646},
-  19:{x:503,y:666}, 39:{x:503,y:688}, 41:{x:503,y:711},
+  19:{x:503,y:666}, 39:{x:503,y:689}, 41:{x:503,y:712},
 };
 
 function canonical(a:number,b:number){return `${Math.min(a,b)}-${Math.max(a,b)}`;}
@@ -137,7 +129,7 @@ function ChannelActivation({a,b,aSource,bSource,active}:{a:Point;b:Point;aSource
   const aEnd=lerp(a,b,.24), bStart=lerp(a,b,.76);
   return <g>
     {aSource!=="inactive"&&<line x1={a.x} y1={a.y} x2={aEnd.x} y2={aEnd.y} stroke={sourceColor(aSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
-    {bSource!=="inactive"&&<line x1={bStart.x} y1={b.y} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
+    {bSource!=="inactive"&&<line x1={bStart.x} y1={bStart.y} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
   </g>;
 }
 
@@ -162,7 +154,6 @@ export function BodyGraph({chart,personalityActivations=[],designActivations=[],
     <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left"/>
     <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right"/>
 
-    {/* Darker rails improve readability while the white halo separates overlaps. */}
     <g>
       {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);return <g key={`rail-${id}`}>
         <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fbfaf7" strokeWidth="4.8"/>
