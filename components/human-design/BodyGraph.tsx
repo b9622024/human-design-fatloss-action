@@ -3,6 +3,8 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
+export const BODYGRAPH_RENDERER_VERSION = "V12";
+
 type Props = {
   chart: CoreHumanDesignChart;
   personalityActivations?: HumanDesignActivation[];
