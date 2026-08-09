@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizeBirthTime } from "@/lib/human-design/time";
 import { getPlanetaryLongitudes } from "@/lib/human-design/astronomy";
 import { solveDesignMoment } from "@/lib/human-design/design-moment";
+import { buildHumanDesignActivations } from "@/lib/human-design/activations";
 
 export const runtime = "nodejs";
 
@@ -23,22 +24,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       engine: {
         name: "SelfHumanDesignAdapter",
-        stage: "ephemeris-and-design-moment",
+        stage: "activation-mapping",
         astronomyEngine: "2.1.19",
+        raveMandalaMapping: "gate-41-origin-302deg-v1",
+        nodePolicy: "true-node-meeus-perturbation-series",
         hdhubReferenceConfigured: Boolean(process.env.HDHUB_API_KEY),
         productionHumanDesignReady: false,
       },
       birthTime: normalized,
-      personality: getPlanetaryLongitudes(birthUtc),
+      personalityLongitudes: getPlanetaryLongitudes(birthUtc),
+      personalityActivations: buildHumanDesignActivations(birthUtc),
       designMoment,
-      design: getPlanetaryLongitudes(designUtc),
+      designLongitudes: getPlanetaryLongitudes(designUtc),
+      designActivations: buildHumanDesignActivations(designUtc),
       notYetImplemented: [
-        "North/South Node policy",
-        "Earth derived longitude",
-        "Rave Mandala Gate/Line mapping",
         "Channels/Centers",
         "Type/Strategy/Authority/Profile/Definition",
-        "Human Design Hub reference diff",
+        "Incarnation Cross lookup validation",
+        "Production Golden Test suite",
       ],
     });
   } catch (error) {
