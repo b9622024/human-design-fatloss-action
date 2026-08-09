@@ -57,12 +57,19 @@ function normalizeDateTimeForHdHub(value: string): string {
   return value.endsWith("Z") ? `${value.slice(0, -1)}+00:00` : value;
 }
 
-function normalizeAuthorityLabel(value: unknown): string | null {
+function normalizeAuthorityLabel(value: unknown, chartType?: string): string | null {
   if (value === null || value === undefined) return null;
   const label = String(value);
-  // HD Hub names Emotional authority as "Emotional" while our canonical
-  // internal label is "Solar Plexus". They are semantically equivalent.
+
+  // HD Hub and this project use different display labels for several
+  // semantically identical authority branches. Normalize provider labels to
+  // the project's canonical internal vocabulary before comparing topology.
   if (label === "Emotional") return "Solar Plexus";
+  if (label === "Sounding Board") return "Mental / Environmental";
+  if (label === "Ego") {
+    if (chartType === "Manifestor") return "Ego Manifested";
+    if (chartType === "Projector") return "Ego Projected";
+  }
   return label;
 }
 
@@ -181,7 +188,10 @@ export function buildActivationReferenceDiff(args: {
       : {};
 
   const activationAllMatch = personality.allMatch && design.allMatch;
-  const normalizedReferenceAuthority = normalizeAuthorityLabel(raw.authority);
+  const normalizedReferenceAuthority = normalizeAuthorityLabel(
+    raw.authority,
+    args.coreChart?.type,
+  );
   const topology = args.coreChart
     ? {
         activeGates: {
