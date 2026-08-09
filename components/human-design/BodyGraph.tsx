@@ -43,6 +43,42 @@ const BODY_SYMBOL: Record<string, string> = {
   Uranus: "♅", Neptune: "♆", Pluto: "♇",
 };
 
+/*
+ * Gate ports are deliberately fixed to the perimeter of each center instead of
+ * being derived from channel midpoints. This keeps labels away from the dense
+ * crossing area and gives every gate a stable visual address.
+ */
+const GATE_PORTS: Record<number, Point> = {
+  64: { x: 420, y: 119 }, 61: { x: 450, y: 122 }, 63: { x: 480, y: 119 },
+  47: { x: 420, y: 156 }, 24: { x: 450, y: 154 }, 4: { x: 480, y: 156 },
+  17: { x: 420, y: 224 }, 43: { x: 450, y: 228 }, 11: { x: 480, y: 224 },
+
+  62: { x: 420, y: 271 }, 23: { x: 450, y: 271 }, 56: { x: 480, y: 271 },
+  16: { x: 400, y: 292 }, 20: { x: 400, y: 320 },
+  31: { x: 425, y: 349 }, 8: { x: 450, y: 349 }, 33: { x: 475, y: 349 },
+  45: { x: 500, y: 292 }, 12: { x: 500, y: 315 }, 35: { x: 500, y: 338 },
+
+  1: { x: 430, y: 398 }, 7: { x: 450, y: 393 }, 13: { x: 470, y: 398 },
+  10: { x: 402, y: 445 }, 25: { x: 500, y: 438 },
+  2: { x: 430, y: 492 }, 15: { x: 450, y: 497 }, 46: { x: 470, y: 492 },
+
+  21: { x: 557, y: 424 }, 51: { x: 538, y: 456 }, 26: { x: 556, y: 483 }, 40: { x: 608, y: 477 },
+
+  48: { x: 348, y: 530 }, 57: { x: 350, y: 550 }, 44: { x: 350, y: 570 }, 50: { x: 348, y: 590 },
+  32: { x: 314, y: 613 }, 18: { x: 294, y: 606 }, 28: { x: 276, y: 596 },
+
+  36: { x: 557, y: 536 }, 22: { x: 552, y: 555 }, 37: { x: 550, y: 576 }, 6: { x: 552, y: 598 },
+  49: { x: 592, y: 620 }, 55: { x: 612, y: 612 }, 30: { x: 630, y: 600 },
+
+  34: { x: 400, y: 596 }, 27: { x: 402, y: 615 }, 59: { x: 402, y: 635 },
+  5: { x: 425, y: 586 }, 14: { x: 450, y: 586 }, 29: { x: 475, y: 586 },
+  3: { x: 425, y: 664 }, 9: { x: 450, y: 664 }, 42: { x: 475, y: 664 },
+
+  54: { x: 392, y: 725 }, 58: { x: 410, y: 721 }, 38: { x: 428, y: 721 },
+  60: { x: 444, y: 721 }, 52: { x: 460, y: 721 }, 53: { x: 476, y: 721 },
+  19: { x: 492, y: 725 }, 39: { x: 508, y: 730 }, 41: { x: 520, y: 740 },
+};
+
 function centerShape(center: CenterId, defined: boolean) {
   const p = CENTER_POINTS[center];
   const fill = defined ? CENTER_FILL[center] : "#ffffff";
@@ -78,15 +114,6 @@ function sourceColors(source: GateSource) {
   return [];
 }
 
-function shiftedLine(p1: Point, p2: Point, offset: number) {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  const len = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-  const ox = (-dy / len) * offset;
-  const oy = (dx / len) * offset;
-  return { a: { x: p1.x + ox, y: p1.y + oy }, b: { x: p2.x + ox, y: p2.y + oy } };
-}
-
 function interp(a: Point, b: Point, t: number): Point {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
@@ -109,13 +136,13 @@ function ColoredLine({ a, b, colors, width = 8 }: { a: Point; b: Point; colors: 
   );
 }
 
-function GateHalf({ center, midpoint, source, completeChannel }: { center: Point; midpoint: Point; source: GateSource; completeChannel: boolean }) {
+function GateHalf({ port, midpoint, source, completeChannel }: { port: Point; midpoint: Point; source: GateSource; completeChannel: boolean }) {
   const colors = sourceColors(source);
-  const end = completeChannel ? midpoint : interp(center, midpoint, 0.76);
+  const end = completeChannel ? midpoint : interp(port, midpoint, 0.72);
   return (
     <g>
-      <line x1={center.x} y1={center.y} x2={midpoint.x} y2={midpoint.y} stroke="#dedbd5" strokeWidth="5" strokeLinecap="round" />
-      {source !== "inactive" && <ColoredLine a={center} b={end} colors={colors} />}
+      <line x1={port.x} y1={port.y} x2={midpoint.x} y2={midpoint.y} stroke="#dedbd5" strokeWidth="4.5" strokeLinecap="round" />
+      {source !== "inactive" && <ColoredLine a={port} b={end} colors={colors} width={7} />}
     </g>
   );
 }
@@ -124,7 +151,7 @@ function gateTextColor(source: GateSource) {
   if (source === "design") return "#d94a43";
   if (source === "personality") return "#24212d";
   if (source === "both") return "#7f2d37";
-  return "#8a867f";
+  return "#817d77";
 }
 
 function ActivationPanel({ x, title, color, activations, align }: { x: number; title: string; color: string; activations: HumanDesignActivation[]; align: "left" | "right" }) {
@@ -152,13 +179,11 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
   const personalityGates = new Set(personalityActivations.map((a) => a.gate));
   const designGates = new Set(designActivations.map((a) => a.gate));
 
-  const pairGroups = new Map<string, number[]>();
-  CHANNELS.forEach((channel, index) => {
-    const pair = [channel.centerA, channel.centerB].sort().join("|");
-    const list = pairGroups.get(pair) ?? [];
-    list.push(index);
-    pairGroups.set(pair, list);
-  });
+  const gateSources = new Map<number, GateSource>();
+  for (const channel of CHANNELS) {
+    gateSources.set(channel.gateA, sourceForGate(channel.gateA, personalityGates, designGates));
+    gateSources.set(channel.gateB, sourceForGate(channel.gateB, personalityGates, designGates));
+  }
 
   return (
     <svg viewBox="0 0 900 850" width={width} role="img" aria-label="Human Design BodyGraph">
@@ -167,29 +192,26 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
       <ActivationPanel x={38} title="Design" color="#d94a43" activations={designActivations} align="left" />
       <ActivationPanel x={862} title="Personality" color="#24212d" activations={personalityActivations} align="right" />
 
-      {CHANNELS.map((channel, index) => {
-        const id = canonicalChannelId(channel.gateA, channel.gateB);
-        const completeChannel = activeChannels.has(id);
-        const pair = [channel.centerA, channel.centerB].sort().join("|");
-        const siblings = pairGroups.get(pair) ?? [index];
-        const siblingIndex = siblings.indexOf(index);
-        const offset = (siblingIndex - (siblings.length - 1) / 2) * 12;
-        const line = shiftedLine(CENTER_POINTS[channel.centerA], CENTER_POINTS[channel.centerB], offset);
-        const mid = interp(line.a, line.b, 0.5);
-        const gateAPos = interp(line.a, mid, 0.54);
-        const gateBPos = interp(line.b, mid, 0.54);
-        const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
-        const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
-        return (
-          <g key={`${id}-${index}`}>
-            <GateHalf center={line.a} midpoint={mid} source={sourceA} completeChannel={completeChannel} />
-            <GateHalf center={line.b} midpoint={mid} source={sourceB} completeChannel={completeChannel} />
-            <text x={gateAPos.x} y={gateAPos.y - 4} textAnchor="middle" fontSize="12" fontWeight="900" fill={gateTextColor(sourceA)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="4">{channel.gateA}</text>
-            <text x={gateBPos.x} y={gateBPos.y - 4} textAnchor="middle" fontSize="12" fontWeight="900" fill={gateTextColor(sourceB)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="4">{channel.gateB}</text>
-          </g>
-        );
-      })}
+      {/* channel geometry layer */}
+      <g>
+        {CHANNELS.map((channel) => {
+          const id = canonicalChannelId(channel.gateA, channel.gateB);
+          const completeChannel = activeChannels.has(id);
+          const a = GATE_PORTS[channel.gateA] ?? CENTER_POINTS[channel.centerA];
+          const b = GATE_PORTS[channel.gateB] ?? CENTER_POINTS[channel.centerB];
+          const mid = interp(a, b, 0.5);
+          const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
+          const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
+          return (
+            <g key={id}>
+              <GateHalf port={a} midpoint={mid} source={sourceA} completeChannel={completeChannel} />
+              <GateHalf port={b} midpoint={mid} source={sourceB} completeChannel={completeChannel} />
+            </g>
+          );
+        })}
+      </g>
 
+      {/* center layer */}
       {(Object.keys(CENTER_POINTS) as CenterId[]).map((center) => (
         <g key={center}>
           {centerShape(center, defined.has(center))}
@@ -198,6 +220,32 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
           </text>
         </g>
       ))}
+
+      {/* gate-port labels are always on top, with a small background halo */}
+      <g>
+        {Object.entries(GATE_PORTS).map(([gateString, port]) => {
+          const gate = Number(gateString);
+          const source = gateSources.get(gate) ?? "inactive";
+          return (
+            <g key={`gate-${gate}`}>
+              <circle cx={port.x} cy={port.y} r="8.5" fill="#fbfaf7" opacity="0.94" />
+              <text
+                x={port.x}
+                y={port.y + 3.4}
+                textAnchor="middle"
+                fontSize="9.5"
+                fontWeight="900"
+                fill={gateTextColor(source)}
+                paintOrder="stroke"
+                stroke="#fbfaf7"
+                strokeWidth="2.6"
+              >
+                {gate}
+              </text>
+            </g>
+          );
+        })}
+      </g>
 
       <g transform="translate(450 822)">
         <rect x="-245" y="-24" width="490" height="34" rx="17" fill="#ffffff" stroke="#e3dfd7" />
