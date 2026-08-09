@@ -29,123 +29,69 @@ const CENTER_FILL: Record<CenterId, string> = {
 };
 
 /*
- * V10 architecture reset.
- * This is no longer a generic graph renderer. It is a fixed Human Design
- * BodyGraph drawing system: compact canonical center proportions, explicit
- * gate ports, and channel-specific straight/polyline rail corridors.
+ * V11: fixed BodyGraph geometry with deliberately separated centers.
+ * Every channel is a single straight Gate-to-Gate line. No curves, no
+ * waypoint routing and no force-directed layout.
  */
 const CENTER_SHAPES: Record<CenterId, Shape> = {
-  Head: {
-    kind: "polygon",
-    points: [
-      { x: 450, y: 48 },
-      { x: 414, y: 116 },
-      { x: 486, y: 116 },
-    ],
-  },
-  Ajna: {
-    kind: "polygon",
-    points: [
-      { x: 414, y: 146 },
-      { x: 486, y: 146 },
-      { x: 450, y: 214 },
-    ],
-  },
-  Throat: { kind: "rect", x: 414, y: 240, width: 72, height: 76, rx: 5 },
-  G: {
-    kind: "polygon",
-    points: [
-      { x: 450, y: 342 },
-      { x: 493, y: 383 },
-      { x: 450, y: 426 },
-      { x: 407, y: 383 },
-    ],
-  },
-  Ego: {
-    kind: "polygon",
-    points: [
-      { x: 524, y: 350 },
-      { x: 503, y: 404 },
-      { x: 554, y: 404 },
-    ],
-  },
-  Spleen: {
-    kind: "polygon",
-    points: [
-      { x: 284, y: 444 },
-      { x: 382, y: 486 },
-      { x: 284, y: 536 },
-    ],
-  },
-  "Solar Plexus": {
-    kind: "polygon",
-    points: [
-      { x: 616, y: 444 },
-      { x: 518, y: 486 },
-      { x: 616, y: 536 },
-    ],
-  },
-  Sacral: { kind: "rect", x: 414, y: 462, width: 72, height: 78, rx: 6 },
-  Root: { kind: "rect", x: 408, y: 584, width: 84, height: 84, rx: 6 },
+  Head: { kind: "polygon", points: [{ x: 450, y: 52 }, { x: 402, y: 138 }, { x: 498, y: 138 }] },
+  Ajna: { kind: "polygon", points: [{ x: 402, y: 174 }, { x: 498, y: 174 }, { x: 450, y: 258 }] },
+  Throat: { kind: "rect", x: 397, y: 300, width: 106, height: 96, rx: 6 },
+  G: { kind: "polygon", points: [{ x: 450, y: 440 }, { x: 505, y: 492 }, { x: 450, y: 548 }, { x: 395, y: 492 }] },
+  Ego: { kind: "polygon", points: [{ x: 540, y: 448 }, { x: 514, y: 520 }, { x: 566, y: 520 }] },
+  Spleen: { kind: "polygon", points: [{ x: 125, y: 575 }, { x: 318, y: 640 }, { x: 125, y: 720 }] },
+  "Solar Plexus": { kind: "polygon", points: [{ x: 775, y: 575 }, { x: 582, y: 640 }, { x: 775, y: 720 }] },
+  Sacral: { kind: "rect", x: 397, y: 605, width: 106, height: 106, rx: 9 },
+  Root: { kind: "rect", x: 390, y: 775, width: 120, height: 102, rx: 8 },
 };
 
 const CENTER_LABELS: Record<CenterId, Point> = {
-  Head: { x: 450, y: 83 },
-  Ajna: { x: 450, y: 174 },
-  Throat: { x: 450, y: 280 },
-  G: { x: 450, y: 386 },
-  Ego: { x: 529, y: 386 },
-  Spleen: { x: 322, y: 492 },
-  "Solar Plexus": { x: 578, y: 492 },
-  Sacral: { x: 450, y: 505 },
-  Root: { x: 450, y: 630 },
+  Head: { x: 450, y: 98 },
+  Ajna: { x: 450, y: 211 },
+  Throat: { x: 450, y: 350 },
+  G: { x: 450, y: 498 },
+  Ego: { x: 540, y: 493 },
+  Spleen: { x: 202, y: 650 },
+  "Solar Plexus": { x: 698, y: 650 },
+  Sacral: { x: 450, y: 660 },
+  Root: { x: 450, y: 830 },
 };
 
 const BODY_SYMBOL: Record<string, string> = {
-  Sun: "☉",
-  Earth: "⊕",
-  Moon: "☽",
-  NorthNode: "☊",
-  SouthNode: "☋",
-  Mercury: "☿",
-  Venus: "♀",
-  Mars: "♂",
-  Jupiter: "♃",
-  Saturn: "♄",
-  Uranus: "♅",
-  Neptune: "♆",
-  Pluto: "♇",
+  Sun: "☉", Earth: "⊕", Moon: "☽", NorthNode: "☊", SouthNode: "☋",
+  Mercury: "☿", Venus: "♀", Mars: "♂", Jupiter: "♃", Saturn: "♄",
+  Uranus: "♅", Neptune: "♆", Pluto: "♇",
 };
 
 const GATE_PORTS: Record<number, Point> = {
-  64: { x: 432, y: 116 }, 61: { x: 450, y: 116 }, 63: { x: 468, y: 116 },
-  47: { x: 432, y: 146 }, 24: { x: 450, y: 146 }, 4: { x: 468, y: 146 },
-  17: { x: 432, y: 180 }, 43: { x: 450, y: 214 }, 11: { x: 468, y: 180 },
+  64: { x: 420, y: 138 }, 61: { x: 450, y: 138 }, 63: { x: 480, y: 138 },
+  47: { x: 420, y: 174 }, 24: { x: 450, y: 174 }, 4: { x: 480, y: 174 },
+  17: { x: 426, y: 216 }, 43: { x: 450, y: 258 }, 11: { x: 474, y: 216 },
 
-  62: { x: 432, y: 240 }, 23: { x: 450, y: 240 }, 56: { x: 468, y: 240 },
-  16: { x: 414, y: 258 }, 20: { x: 414, y: 283 },
-  45: { x: 486, y: 255 }, 12: { x: 486, y: 278 }, 35: { x: 486, y: 301 },
-  31: { x: 432, y: 316 }, 8: { x: 450, y: 316 }, 33: { x: 468, y: 316 },
+  62: { x: 420, y: 300 }, 23: { x: 450, y: 300 }, 56: { x: 480, y: 300 },
+  16: { x: 397, y: 322 }, 20: { x: 397, y: 362 },
+  45: { x: 503, y: 322 }, 12: { x: 503, y: 350 }, 35: { x: 503, y: 378 },
+  31: { x: 420, y: 396 }, 8: { x: 450, y: 396 }, 33: { x: 480, y: 396 },
 
-  1: { x: 427, y: 364 }, 7: { x: 450, y: 342 }, 13: { x: 473, y: 364 },
-  10: { x: 407, y: 383 }, 25: { x: 493, y: 383 },
-  2: { x: 427, y: 406 }, 15: { x: 450, y: 426 }, 46: { x: 473, y: 406 },
+  7: { x: 450, y: 440 }, 1: { x: 423, y: 466 }, 13: { x: 477, y: 466 },
+  10: { x: 395, y: 492 }, 25: { x: 505, y: 492 },
+  2: { x: 423, y: 520 }, 15: { x: 450, y: 548 }, 46: { x: 477, y: 520 },
 
-  21: { x: 516, y: 371 }, 51: { x: 508, y: 391 }, 26: { x: 516, y: 404 }, 40: { x: 545, y: 404 },
+  21: { x: 532, y: 470 }, 51: { x: 520, y: 500 }, 26: { x: 526, y: 520 }, 40: { x: 554, y: 520 },
 
-  48: { x: 363, y: 478 }, 57: { x: 374, y: 483 }, 44: { x: 382, y: 486 }, 50: { x: 371, y: 498 },
-  32: { x: 342, y: 507 }, 18: { x: 320, y: 518 }, 28: { x: 298, y: 529 },
+  48: { x: 292, y: 631 }, 57: { x: 307, y: 636 }, 44: { x: 318, y: 640 },
+  50: { x: 306, y: 651 }, 32: { x: 265, y: 669 }, 18: { x: 220, y: 688 }, 28: { x: 165, y: 710 },
 
-  36: { x: 537, y: 478 }, 22: { x: 526, y: 483 }, 37: { x: 518, y: 486 }, 6: { x: 529, y: 498 },
-  49: { x: 558, y: 507 }, 55: { x: 580, y: 518 }, 30: { x: 602, y: 529 },
+  36: { x: 608, y: 631 }, 22: { x: 593, y: 636 }, 37: { x: 582, y: 640 },
+  6: { x: 594, y: 651 }, 49: { x: 635, y: 669 }, 55: { x: 680, y: 688 }, 30: { x: 735, y: 710 },
 
-  5: { x: 432, y: 462 }, 14: { x: 450, y: 462 }, 29: { x: 468, y: 462 },
-  34: { x: 414, y: 480 }, 27: { x: 414, y: 501 }, 59: { x: 414, y: 522 },
-  3: { x: 432, y: 540 }, 9: { x: 450, y: 540 }, 42: { x: 468, y: 540 },
+  5: { x: 424, y: 605 }, 14: { x: 450, y: 605 }, 29: { x: 476, y: 605 },
+  34: { x: 397, y: 628 }, 27: { x: 397, y: 657 }, 59: { x: 397, y: 688 },
+  3: { x: 424, y: 711 }, 9: { x: 450, y: 711 }, 42: { x: 476, y: 711 },
 
-  54: { x: 414, y: 584 }, 58: { x: 426, y: 584 }, 38: { x: 438, y: 584 },
-  60: { x: 450, y: 584 }, 52: { x: 462, y: 584 }, 53: { x: 474, y: 584 }, 19: { x: 486, y: 584 },
-  39: { x: 492, y: 611 }, 41: { x: 492, y: 643 },
+  54: { x: 398, y: 775 }, 58: { x: 415, y: 775 }, 38: { x: 432, y: 775 },
+  60: { x: 450, y: 775 }, 52: { x: 468, y: 775 }, 53: { x: 485, y: 775 }, 19: { x: 502, y: 775 },
+  39: { x: 510, y: 806 }, 41: { x: 510, y: 846 },
 };
 
 const GATE_CENTER = new Map<number, CenterId>();
@@ -154,74 +100,8 @@ for (const channel of CHANNELS) {
   GATE_CENTER.set(channel.gateB, channel.centerB);
 }
 
-/*
- * Explicit channel rails. They are intentionally piecewise-straight so the
- * visible network resembles the traditional BodyGraph rather than a generic
- * force-directed graph. Endpoints are always the actual gate ports.
- */
-const CHANNEL_ROUTES: Record<string, Point[]> = {
-  "47-64": [{ x: 432, y: 116 }, { x: 432, y: 146 }],
-  "24-61": [{ x: 450, y: 116 }, { x: 450, y: 146 }],
-  "4-63": [{ x: 468, y: 116 }, { x: 468, y: 146 }],
-
-  "17-62": [{ x: 432, y: 180 }, { x: 430, y: 211 }, { x: 432, y: 240 }],
-  "23-43": [{ x: 450, y: 214 }, { x: 450, y: 240 }],
-  "11-56": [{ x: 468, y: 180 }, { x: 470, y: 211 }, { x: 468, y: 240 }],
-
-  "16-48": [{ x: 414, y: 258 }, { x: 395, y: 340 }, { x: 380, y: 420 }, { x: 363, y: 478 }],
-  "20-57": [{ x: 414, y: 283 }, { x: 401, y: 347 }, { x: 388, y: 421 }, { x: 374, y: 483 }],
-  "10-20": [{ x: 414, y: 283 }, { x: 405, y: 330 }, { x: 407, y: 383 }],
-  "20-34": [{ x: 414, y: 283 }, { x: 402, y: 365 }, { x: 402, y: 447 }, { x: 414, y: 480 }],
-
-  "12-22": [{ x: 486, y: 278 }, { x: 500, y: 350 }, { x: 514, y: 425 }, { x: 526, y: 483 }],
-  "35-36": [{ x: 486, y: 301 }, { x: 504, y: 360 }, { x: 522, y: 426 }, { x: 537, y: 478 }],
-  "21-45": [{ x: 486, y: 255 }, { x: 502, y: 315 }, { x: 516, y: 371 }],
-
-  "7-31": [{ x: 432, y: 316 }, { x: 440, y: 331 }, { x: 450, y: 342 }],
-  "1-8": [{ x: 450, y: 316 }, { x: 442, y: 340 }, { x: 427, y: 364 }],
-  "13-33": [{ x: 468, y: 316 }, { x: 470, y: 339 }, { x: 473, y: 364 }],
-
-  "2-14": [{ x: 427, y: 406 }, { x: 438, y: 434 }, { x: 450, y: 462 }],
-  "5-15": [{ x: 432, y: 462 }, { x: 440, y: 443 }, { x: 450, y: 426 }],
-  "29-46": [{ x: 468, y: 462 }, { x: 472, y: 434 }, { x: 473, y: 406 }],
-  "10-34": [{ x: 407, y: 383 }, { x: 403, y: 432 }, { x: 414, y: 480 }],
-
-  "34-57": [{ x: 414, y: 480 }, { x: 395, y: 481 }, { x: 374, y: 483 }],
-  "27-50": [{ x: 414, y: 501 }, { x: 392, y: 501 }, { x: 371, y: 498 }],
-
-  "32-54": [{ x: 342, y: 507 }, { x: 366, y: 545 }, { x: 414, y: 584 }],
-  "18-58": [{ x: 320, y: 518 }, { x: 361, y: 552 }, { x: 426, y: 584 }],
-  "28-38": [{ x: 298, y: 529 }, { x: 355, y: 559 }, { x: 438, y: 584 }],
-
-  "3-60": [{ x: 432, y: 540 }, { x: 440, y: 562 }, { x: 450, y: 584 }],
-  "9-52": [{ x: 450, y: 540 }, { x: 456, y: 562 }, { x: 462, y: 584 }],
-  "42-53": [{ x: 468, y: 540 }, { x: 471, y: 562 }, { x: 474, y: 584 }],
-
-  "19-49": [{ x: 486, y: 584 }, { x: 520, y: 552 }, { x: 558, y: 507 }],
-  "39-55": [{ x: 492, y: 611 }, { x: 535, y: 560 }, { x: 580, y: 518 }],
-  "30-41": [{ x: 492, y: 643 }, { x: 550, y: 584 }, { x: 602, y: 529 }],
-
-  "25-51": [{ x: 493, y: 383 }, { x: 500, y: 386 }, { x: 508, y: 391 }],
-  "26-44": [{ x: 516, y: 404 }, { x: 465, y: 443 }, { x: 420, y: 469 }, { x: 382, y: 486 }],
-  "37-40": [{ x: 545, y: 404 }, { x: 534, y: 444 }, { x: 518, y: 486 }],
-  "10-57": [{ x: 407, y: 383 }, { x: 397, y: 430 }, { x: 387, y: 463 }, { x: 374, y: 483 }],
-  "6-59": [{ x: 414, y: 522 }, { x: 462, y: 517 }, { x: 500, y: 507 }, { x: 529, y: 498 }],
-};
-
-function canonicalChannelId(gateA: number, gateB: number) {
-  return `${Math.min(gateA, gateB)}-${Math.max(gateA, gateB)}`;
-}
-
-function routeFor(gateA: number, gateB: number): Point[] {
-  const id = canonicalChannelId(gateA, gateB);
-  const base = CHANNEL_ROUTES[id] ?? [GATE_PORTS[gateA], GATE_PORTS[gateB]];
-  const first = base[0];
-  const actualA = GATE_PORTS[gateA];
-  const actualB = GATE_PORTS[gateB];
-  if (!actualA || !actualB) return base;
-  const dA = Math.hypot(first.x - actualA.x, first.y - actualA.y);
-  const dB = Math.hypot(first.x - actualB.x, first.y - actualB.y);
-  return dA <= dB ? base : [...base].reverse();
+function canonicalChannelId(a: number, b: number) {
+  return `${Math.min(a, b)}-${Math.max(a, b)}`;
 }
 
 function sourceForGate(gate: number, personality: Set<number>, design: Set<number>): GateSource {
@@ -233,122 +113,75 @@ function sourceForGate(gate: number, personality: Set<number>, design: Set<numbe
   return "inactive";
 }
 
-function sourceColors(source: GateSource) {
-  if (source === "personality") return ["#191820"];
-  if (source === "design") return ["#d84238"];
-  if (source === "both") return ["#191820", "#d84238"];
-  return [];
+function midpoint(a: Point, b: Point): Point {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
-function polylineLength(points: Point[]) {
-  let total = 0;
-  for (let i = 1; i < points.length; i += 1) total += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
-  return total;
+function lerp(a: Point, b: Point, t: number): Point {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
-function pointAtDistance(points: Point[], distance: number): { point: Point; segmentIndex: number } {
-  let remaining = distance;
-  for (let i = 1; i < points.length; i += 1) {
-    const a = points[i - 1];
-    const b = points[i];
-    const len = Math.hypot(b.x - a.x, b.y - a.y);
-    if (remaining <= len) {
-      const t = len === 0 ? 0 : remaining / len;
-      return { point: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, segmentIndex: i };
-    }
-    remaining -= len;
-  }
-  return { point: points[points.length - 1], segmentIndex: points.length - 1 };
+function offsetSegment(a: Point, b: Point, offset: number): [Point, Point] {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ox = (-dy / len) * offset;
+  const oy = (dx / len) * offset;
+  return [{ x: a.x + ox, y: a.y + oy }, { x: b.x + ox, y: b.y + oy }];
 }
 
-function sliceRoute(points: Point[], startFraction: number, endFraction: number): Point[] {
-  const total = polylineLength(points);
-  const start = pointAtDistance(points, total * startFraction);
-  const end = pointAtDistance(points, total * endFraction);
-  const result: Point[] = [start.point];
-  for (let i = start.segmentIndex; i < end.segmentIndex; i += 1) result.push(points[i]);
-  result.push(end.point);
-  return result;
-}
-
-function pointsString(points: Point[]) {
-  return points.map((p) => `${p.x},${p.y}`).join(" ");
-}
-
-function offsetPolyline(points: Point[], offset: number): Point[] {
-  if (points.length < 2) return points;
-  return points.map((p, i) => {
-    const prev = points[Math.max(0, i - 1)];
-    const next = points[Math.min(points.length - 1, i + 1)];
-    const dx = next.x - prev.x;
-    const dy = next.y - prev.y;
-    const len = Math.hypot(dx, dy) || 1;
-    return { x: p.x + (-dy / len) * offset, y: p.y + (dx / len) * offset };
-  });
-}
-
-function ColoredRail({ points, source }: { points: Point[]; source: GateSource }) {
-  const colors = sourceColors(source);
-  if (!colors.length) return null;
-  if (colors.length === 1) {
-    return <polyline points={pointsString(points)} fill="none" stroke={colors[0]} strokeWidth="6" strokeLinejoin="miter" strokeLinecap="butt" />;
-  }
-  return (
-    <g>
-      <polyline points={pointsString(offsetPolyline(points, -2.2))} fill="none" stroke={colors[0]} strokeWidth="3" strokeLinejoin="miter" strokeLinecap="butt" />
-      <polyline points={pointsString(offsetPolyline(points, 2.2))} fill="none" stroke={colors[1]} strokeWidth="3" strokeLinejoin="miter" strokeLinecap="butt" />
-    </g>
-  );
+function ColoredLine({ a, b, source }: { a: Point; b: Point; source: GateSource }) {
+  if (source === "inactive") return null;
+  if (source === "personality") return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#191820" strokeWidth="7" strokeLinecap="butt" />;
+  if (source === "design") return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#d84238" strokeWidth="7" strokeLinecap="butt" />;
+  const [a1, b1] = offsetSegment(a, b, -2.2);
+  const [a2, b2] = offsetSegment(a, b, 2.2);
+  return <g>
+    <line x1={a1.x} y1={a1.y} x2={b1.x} y2={b1.y} stroke="#191820" strokeWidth="3.2" strokeLinecap="butt" />
+    <line x1={a2.x} y1={a2.y} x2={b2.x} y2={b2.y} stroke="#d84238" strokeWidth="3.2" strokeLinecap="butt" />
+  </g>;
 }
 
 function renderCenter(center: CenterId, defined: boolean) {
   const shape = CENTER_SHAPES[center];
   const fill = defined ? CENTER_FILL[center] : "#ffffff";
-  const common = { fill, stroke: "#191820", strokeWidth: 2.3 };
+  const common = { fill, stroke: "#191820", strokeWidth: 3 };
   if (shape.kind === "rect") return <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx={shape.rx} {...common} />;
   return <polygon points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")} {...common} />;
-}
-
-function centerAnchor(center: CenterId): Point {
-  return CENTER_LABELS[center];
 }
 
 function gateLabelPoint(gate: number): Point {
   const port = GATE_PORTS[gate];
   const center = GATE_CENTER.get(gate);
   if (!center) return port;
-  const target = centerAnchor(center);
+  const target = CENTER_LABELS[center];
   const dx = target.x - port.x;
   const dy = target.y - port.y;
   const len = Math.hypot(dx, dy) || 1;
-  const inset = 7;
+  const inset = 10;
   return { x: port.x + (dx / len) * inset, y: port.y + (dy / len) * inset };
 }
 
 function gateTextColor(source: GateSource) {
   if (source === "design") return "#d84238";
   if (source === "personality") return "#191820";
-  if (source === "both") return "#6f2330";
-  return "#3f3d39";
+  if (source === "both") return "#762732";
+  return "#4d4a45";
 }
 
 function ActivationPanel({ x, title, color, activations, align }: { x: number; title: string; color: string; activations: HumanDesignActivation[]; align: "left" | "right" }) {
-  const rowH = 30;
-  const startY = 80;
-  return (
-    <g>
-      <text x={x} y="48" textAnchor={align === "left" ? "start" : "end"} fontSize="17" fontWeight="800" fill={color}>{title}</text>
-      {activations.map((a, i) => {
-        const y = startY + i * rowH;
-        return (
-          <g key={`${title}-${a.body}`}>
-            <text x={x} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="18" fontWeight="700" fill={color}>{BODY_SYMBOL[a.body] ?? "•"}</text>
-            <text x={x + (align === "left" ? 25 : -25)} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="14" fontWeight="700" fill="#252433">{a.gate}.{a.line}</text>
-          </g>
-        );
-      })}
-    </g>
-  );
+  const rowH = 31;
+  const startY = 88;
+  return <g>
+    <text x={x} y="52" textAnchor={align === "left" ? "start" : "end"} fontSize="18" fontWeight="800" fill={color}>{title}</text>
+    {activations.map((a, i) => {
+      const y = startY + i * rowH;
+      return <g key={`${title}-${a.body}`}>
+        <text x={x} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="18" fontWeight="700" fill={color}>{BODY_SYMBOL[a.body] ?? "•"}</text>
+        <text x={x + (align === "left" ? 25 : -25)} y={y} textAnchor={align === "left" ? "start" : "end"} fontSize="14" fontWeight="700" fill="#252433">{a.gate}.{a.line}</text>
+      </g>;
+    })}
+  </g>;
 }
 
 export function BodyGraph({ chart, personalityActivations = [], designActivations = [], width = 900 }: Props) {
@@ -357,76 +190,56 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
   const personalityGates = new Set(personalityActivations.map((a) => a.gate));
   const designGates = new Set(designActivations.map((a) => a.gate));
 
-  return (
-    <svg viewBox="0 0 900 720" width="100%" style={{ maxWidth: width, height: "auto" }} role="img" aria-label="Human Design BodyGraph">
-      <rect x="0" y="0" width="900" height="720" rx="24" fill="#fbfaf7" />
-      <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left" />
-      <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right" />
+  return <svg viewBox="0 0 900 930" width="100%" style={{ maxWidth: width, height: "auto" }} role="img" aria-label="Human Design BodyGraph">
+    <rect x="0" y="0" width="900" height="930" rx="24" fill="#fbfaf7" />
+    <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left" />
+    <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right" />
 
-      {/* Traditional-style channel rails: dark outer rail + white inner corridor. */}
-      <g>
-        {CHANNELS.map((channel) => {
-          const route = routeFor(channel.gateA, channel.gateB);
-          const id = canonicalChannelId(channel.gateA, channel.gateB);
-          const complete = activeChannels.has(id);
-          const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
-          const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
-          const firstHalf = sliceRoute(route, 0, 0.5);
-          const secondHalf = sliceRoute(route, 0.5, 1);
-          const hangingA = sliceRoute(route, 0, 0.42);
-          const hangingB = sliceRoute(route, 0.58, 1);
+    <g>
+      {CHANNELS.map((channel) => {
+        const a = GATE_PORTS[channel.gateA];
+        const b = GATE_PORTS[channel.gateB];
+        if (!a || !b) return null;
+        const id = canonicalChannelId(channel.gateA, channel.gateB);
+        const complete = activeChannels.has(id);
+        const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
+        const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
+        const mid = midpoint(a, b);
+        const stubA = lerp(a, b, 0.34);
+        const stubB = lerp(b, a, 0.34);
+        return <g key={id}>
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#8d8981" strokeWidth="9" strokeLinecap="butt" opacity="0.75" />
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#ffffff" strokeWidth="5.5" strokeLinecap="butt" />
+          {complete ? <>
+            {sourceA !== "inactive" && <ColoredLine a={a} b={mid} source={sourceA} />}
+            {sourceB !== "inactive" && <ColoredLine a={b} b={mid} source={sourceB} />}
+          </> : <>
+            {sourceA !== "inactive" && <ColoredLine a={a} b={stubA} source={sourceA} />}
+            {sourceB !== "inactive" && <ColoredLine a={b} b={stubB} source={sourceB} />}
+          </>}
+        </g>;
+      })}
+    </g>
 
-          return (
-            <g key={id}>
-              <polyline points={pointsString(route)} fill="none" stroke="#8f8b84" strokeWidth="10" strokeLinejoin="miter" strokeLinecap="butt" opacity="0.78" />
-              <polyline points={pointsString(route)} fill="none" stroke="#ffffff" strokeWidth="6.2" strokeLinejoin="miter" strokeLinecap="butt" />
-              {complete ? (
-                <>
-                  {sourceA !== "inactive" && <ColoredRail points={firstHalf} source={sourceA} />}
-                  {sourceB !== "inactive" && <ColoredRail points={secondHalf} source={sourceB} />}
-                </>
-              ) : (
-                <>
-                  {sourceA !== "inactive" && <ColoredRail points={hangingA} source={sourceA} />}
-                  {sourceB !== "inactive" && <ColoredRail points={hangingB} source={sourceB} />}
-                </>
-              )}
-            </g>
-          );
-        })}
-      </g>
+    <g>
+      {(Object.keys(CENTER_SHAPES) as CenterId[]).map((center) => <g key={center}>
+        {renderCenter(center, defined.has(center))}
+        <text x={CENTER_LABELS[center].x} y={CENTER_LABELS[center].y + 5} textAnchor="middle" fontSize="15" fontWeight="800" fill="#191820">{center === "Solar Plexus" ? "Solar" : center}</text>
+      </g>)}
+    </g>
 
-      <g>
-        {(Object.keys(CENTER_SHAPES) as CenterId[]).map((center) => (
-          <g key={center}>
-            {renderCenter(center, defined.has(center))}
-            <text x={CENTER_LABELS[center].x} y={CENTER_LABELS[center].y + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="#191820">
-              {center === "Solar Plexus" ? "Solar" : center}
-            </text>
-          </g>
-        ))}
-      </g>
+    <g>
+      {Object.keys(GATE_PORTS).map((gateString) => {
+        const gate = Number(gateString);
+        const p = gateLabelPoint(gate);
+        const source = sourceForGate(gate, personalityGates, designGates);
+        return <text key={`gate-${gate}`} x={p.x} y={p.y + 3.5} textAnchor="middle" fontSize="10.5" fontWeight="900" fill={gateTextColor(source)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="2.8" strokeLinejoin="round">{gate}</text>;
+      })}
+    </g>
 
-      {/* Gate numbers are inset just inside their own center border, matching the chart instead of floating in space. */}
-      <g>
-        {Object.keys(GATE_PORTS).map((gateString) => {
-          const gate = Number(gateString);
-          const p = gateLabelPoint(gate);
-          const source = sourceForGate(gate, personalityGates, designGates);
-          return (
-            <text key={`gate-${gate}`} x={p.x} y={p.y + 3} textAnchor="middle" fontSize="8.8" fontWeight="900" fill={gateTextColor(source)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="2.4" strokeLinejoin="round">
-              {gate}
-            </text>
-          );
-        })}
-      </g>
-
-      <g transform="translate(450 696)">
-        <rect x="-235" y="-23" width="470" height="32" rx="16" fill="#ffffff" stroke="#ddd8cf" />
-        <text x="0" y="-2" textAnchor="middle" fontSize="13" fontWeight="700" fill="#5a5650">
-          {chart.type} · {chart.authority} · {chart.profile} · {chart.definition}
-        </text>
-      </g>
-    </svg>
-  );
+    <g transform="translate(450 906)">
+      <rect x="-245" y="-22" width="490" height="32" rx="16" fill="#ffffff" stroke="#ddd8cf" />
+      <text x="0" y="-2" textAnchor="middle" fontSize="14" fontWeight="700" fill="#5a5650">{chart.type} · {chart.authority} · {chart.profile} · {chart.definition}</text>
+    </g>
+  </svg>;
 }
