@@ -11,7 +11,6 @@ type Props = {
 };
 
 type Point = { x: number; y: number };
-
 type GateSource = "personality" | "design" | "both" | "inactive";
 
 const CENTER_POINTS: Record<CenterId, Point> = {
@@ -39,19 +38,9 @@ const CENTER_FILL: Record<CenterId, string> = {
 };
 
 const BODY_SYMBOL: Record<string, string> = {
-  Sun: "☉",
-  Earth: "⊕",
-  Moon: "☽",
-  NorthNode: "☊",
-  SouthNode: "☋",
-  Mercury: "☿",
-  Venus: "♀",
-  Mars: "♂",
-  Jupiter: "♃",
-  Saturn: "♄",
-  Uranus: "♅",
-  Neptune: "♆",
-  Pluto: "♇",
+  Sun: "☉", Earth: "⊕", Moon: "☽", NorthNode: "☊", SouthNode: "☋",
+  Mercury: "☿", Venus: "♀", Mars: "♂", Jupiter: "♃", Saturn: "♄",
+  Uranus: "♅", Neptune: "♆", Pluto: "♇",
 };
 
 function centerShape(center: CenterId, defined: boolean) {
@@ -86,7 +75,7 @@ function sourceColors(source: GateSource) {
   if (source === "personality") return ["#24212d"];
   if (source === "design") return ["#d94a43"];
   if (source === "both") return ["#24212d", "#d94a43"];
-  return ["#dedbd5"];
+  return [];
 }
 
 function shiftedLine(p1: Point, p2: Point, offset: number) {
@@ -95,23 +84,17 @@ function shiftedLine(p1: Point, p2: Point, offset: number) {
   const len = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
   const ox = (-dy / len) * offset;
   const oy = (dx / len) * offset;
-  return {
-    a: { x: p1.x + ox, y: p1.y + oy },
-    b: { x: p2.x + ox, y: p2.y + oy },
-  };
+  return { a: { x: p1.x + ox, y: p1.y + oy }, b: { x: p2.x + ox, y: p2.y + oy } };
 }
 
 function interp(a: Point, b: Point, t: number): Point {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
 }
 
-function GateSegment({ a, b, source, active }: { a: Point; b: Point; source: GateSource; active: boolean }) {
-  const colors = sourceColors(source);
-  if (!active) {
-    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#dedbd5" strokeWidth="5" strokeLinecap="round" />;
-  }
+function ColoredLine({ a, b, colors, width = 8 }: { a: Point; b: Point; colors: string[]; width?: number }) {
+  if (colors.length === 0) return null;
   if (colors.length === 1) {
-    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colors[0]} strokeWidth="8" strokeLinecap="round" />;
+    return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={colors[0]} strokeWidth={width} strokeLinecap="round" />;
   }
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -124,6 +107,24 @@ function GateSegment({ a, b, source, active }: { a: Point; b: Point; source: Gat
       <line x1={a.x - ox} y1={a.y - oy} x2={b.x - ox} y2={b.y - oy} stroke={colors[1]} strokeWidth="4" strokeLinecap="round" />
     </g>
   );
+}
+
+function GateHalf({ center, midpoint, source, completeChannel }: { center: Point; midpoint: Point; source: GateSource; completeChannel: boolean }) {
+  const colors = sourceColors(source);
+  const end = completeChannel ? midpoint : interp(center, midpoint, 0.76);
+  return (
+    <g>
+      <line x1={center.x} y1={center.y} x2={midpoint.x} y2={midpoint.y} stroke="#dedbd5" strokeWidth="5" strokeLinecap="round" />
+      {source !== "inactive" && <ColoredLine a={center} b={end} colors={colors} />}
+    </g>
+  );
+}
+
+function gateTextColor(source: GateSource) {
+  if (source === "design") return "#d94a43";
+  if (source === "personality") return "#24212d";
+  if (source === "both") return "#7f2d37";
+  return "#8a867f";
 }
 
 function ActivationPanel({ x, title, color, activations, align }: { x: number; title: string; color: string; activations: HumanDesignActivation[]; align: "left" | "right" }) {
@@ -168,23 +169,23 @@ export function BodyGraph({ chart, personalityActivations = [], designActivation
 
       {CHANNELS.map((channel, index) => {
         const id = canonicalChannelId(channel.gateA, channel.gateB);
-        const active = activeChannels.has(id);
+        const completeChannel = activeChannels.has(id);
         const pair = [channel.centerA, channel.centerB].sort().join("|");
         const siblings = pairGroups.get(pair) ?? [index];
         const siblingIndex = siblings.indexOf(index);
         const offset = (siblingIndex - (siblings.length - 1) / 2) * 12;
         const line = shiftedLine(CENTER_POINTS[channel.centerA], CENTER_POINTS[channel.centerB], offset);
         const mid = interp(line.a, line.b, 0.5);
-        const gateAPos = interp(line.a, mid, 0.72);
-        const gateBPos = interp(line.b, mid, 0.72);
+        const gateAPos = interp(line.a, mid, 0.54);
+        const gateBPos = interp(line.b, mid, 0.54);
         const sourceA = sourceForGate(channel.gateA, personalityGates, designGates);
         const sourceB = sourceForGate(channel.gateB, personalityGates, designGates);
         return (
           <g key={`${id}-${index}`}>
-            <GateSegment a={line.a} b={mid} source={sourceA} active={active} />
-            <GateSegment a={mid} b={line.b} source={sourceB} active={active} />
-            <text x={gateAPos.x} y={gateAPos.y - 4} textAnchor="middle" fontSize="12" fontWeight="800" fill={active ? "#252433" : "#77736d"} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="4">{channel.gateA}</text>
-            <text x={gateBPos.x} y={gateBPos.y - 4} textAnchor="middle" fontSize="12" fontWeight="800" fill={active ? "#252433" : "#77736d"} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="4">{channel.gateB}</text>
+            <GateHalf center={line.a} midpoint={mid} source={sourceA} completeChannel={completeChannel} />
+            <GateHalf center={line.b} midpoint={mid} source={sourceB} completeChannel={completeChannel} />
+            <text x={gateAPos.x} y={gateAPos.y - 4} textAnchor="middle" fontSize="12" fontWeight="900" fill={gateTextColor(sourceA)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="4">{channel.gateA}</text>
+            <text x={gateBPos.x} y={gateBPos.y - 4} textAnchor="middle" fontSize="12" fontWeight="900" fill={gateTextColor(sourceB)} paintOrder="stroke" stroke="#fbfaf7" strokeWidth="4">{channel.gateB}</text>
           </g>
         );
       })}
