@@ -74,9 +74,13 @@ function buildHumanDesignFrame(svg: SVGSVGElement, meta: { name: string; birthDa
   const graphMarkup = localizedBodyGraphMarkup(svg);
   const summary = parseHumanSummary(meta.humanSummary);
   const profileEnglish = profileDescription(summary.profile);
-  const leftViewBox = "0 12 195 355";
-  const coreViewBox = "250 24 400 710";
-  const rightViewBox = "705 12 195 355";
+
+  // Keep generous safety margins around all three cropped views. This changes only
+  // report framing; the canonical BodyGraph geometry, gate coordinates and channels stay untouched.
+  const leftViewBox = "0 0 215 380";
+  const coreViewBox = "238 8 424 732";
+  const rightViewBox = "685 0 215 380";
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1600" width="900" height="1600">
     <rect width="900" height="1600" fill="#f7f3ea"/>
     <g transform="translate(18 16)">
@@ -92,12 +96,15 @@ function buildHumanDesignFrame(svg: SVGSVGElement, meta: { name: string; birthDa
       <text x="442" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生時間</text><text x="442" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthTime || "未知")}</text>
       <text x="642" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生地</text><text x="642" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthCity || "—")}</text>
     </g>
+
     <rect x="18" y="266" width="864" height="1252" rx="30" fill="#fbfaf7" stroke="#ded9cf"/>
     <text x="46" y="315" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#d84238">設計 Design</text>
-    <text x="854" y="315" text-anchor="end" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#17172d">人格 Personality</text>
-    <svg x="35" y="330" width="175" height="515" viewBox="${leftViewBox}" preserveAspectRatio="xMinYMin meet">${graphMarkup}</svg>
-    <svg x="160" y="286" width="580" height="1025" viewBox="${coreViewBox}" preserveAspectRatio="xMidYMid meet">${graphMarkup}</svg>
-    <svg x="690" y="330" width="175" height="515" viewBox="${rightViewBox}" preserveAspectRatio="xMaxYMin meet">${graphMarkup}</svg>
+    <text x="838" y="315" text-anchor="end" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#17172d">人格 Personality</text>
+
+    <svg x="42" y="334" width="164" height="490" viewBox="${leftViewBox}" preserveAspectRatio="xMinYMin meet">${graphMarkup}</svg>
+    <svg x="174" y="300" width="552" height="990" viewBox="${coreViewBox}" preserveAspectRatio="xMidYMid meet">${graphMarkup}</svg>
+    <svg x="694" y="334" width="158" height="490" viewBox="${rightViewBox}" preserveAspectRatio="xMaxYMin meet">${graphMarkup}</svg>
+
     <g transform="translate(44 1328)">
       <rect width="812" height="112" rx="22" fill="#f3eee4" stroke="#e1dacd"/>
       <line x1="203" y1="16" x2="203" y2="96" stroke="#ddd5c8"/><line x1="406" y1="16" x2="406" y2="96" stroke="#ddd5c8"/><line x1="609" y1="16" x2="609" y2="96" stroke="#ddd5c8"/>
