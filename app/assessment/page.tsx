@@ -30,6 +30,9 @@ const inputStyle = {
   fontSize: 16,
   background: "#fff",
   width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  display: "block",
   boxSizing: "border-box",
 } as const;
 
@@ -163,33 +166,33 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
             ? "你的資料已完成計算。正式版本將由後台產生完整報告，再由崇銘老師提供給你。"
             : step === "2"
               ? "一次只回答一題。請依最近一個月最常出現的真實狀態作答，不用選理想中的自己。"
-              : "第一版先服務台灣，時區固定使用 Asia/Taipei。"}
+              : "請填寫出生資料，完成後會直接進入行為測驗。"}
         </p>
       </section>
 
       {step === "1" && (
-        <section style={{ ...cardStyle, marginTop: 18 }}>
-          <form method="GET" style={{ display: "grid", gap: 16 }}>
+        <section style={{ ...cardStyle, marginTop: 18, overflow: "hidden" }}>
+          <form method="GET" style={{ display: "grid", gap: 16, minWidth: 0 }}>
             <input type="hidden" name="step" value="2" />
             <input type="hidden" name="q" value="1" />
-            <label style={{ display: "grid", gap: 8 }}>
+            <label style={{ display: "grid", gap: 8, minWidth: 0 }}>
               <strong style={{ fontSize: 17 }}>姓名</strong>
               <input type="text" name="name" required defaultValue={name} placeholder="請輸入姓名或暱稱" style={inputStyle} />
             </label>
-            <label style={{ display: "grid", gap: 8 }}>
+            <label style={{ display: "grid", gap: 8, minWidth: 0 }}>
               <strong style={{ fontSize: 17 }}>出生日期</strong>
               <input type="date" name="birthDate" required defaultValue={birthDate} style={inputStyle} />
             </label>
-            <label style={{ display: "grid", gap: 8 }}>
+            <label style={{ display: "grid", gap: 8, minWidth: 0 }}>
               <strong style={{ fontSize: 17 }}>出生時間</strong>
               <input type="time" name="birthTime" defaultValue={birthTime} style={inputStyle} />
               <span style={{ color: "#706c67", fontSize: 14 }}>知道精確時間請填寫，不知道可勾選下方選項。</span>
             </label>
-            <label style={{ display: "flex", gap: 10, alignItems: "flex-start", lineHeight: 1.5 }}>
-              <input type="checkbox" name="unknownTime" value="1" defaultChecked={unknownTime} style={{ marginTop: 4, width: 18, height: 18 }} />
+            <label style={{ display: "flex", gap: 10, alignItems: "flex-start", lineHeight: 1.5, minWidth: 0 }}>
+              <input type="checkbox" name="unknownTime" value="1" defaultChecked={unknownTime} style={{ marginTop: 4, width: 18, height: 18, flex: "0 0 auto" }} />
               <span><strong>我不知道出生時間</strong><br /><span style={{ color: "#706c67", fontSize: 14 }}>仍可完成行為測驗，但最後不顯示個人人類圖分析。</span></span>
             </label>
-            <label style={{ display: "grid", gap: 8 }}>
+            <label style={{ display: "grid", gap: 8, minWidth: 0 }}>
               <strong style={{ fontSize: 17 }}>出生縣市</strong>
               <select name="birthCity" defaultValue={birthCity} style={inputStyle}>{TAIWAN_CITIES.map(city => <option key={city} value={city}>{city}</option>)}</select>
             </label>
