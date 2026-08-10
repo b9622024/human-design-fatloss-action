@@ -42,6 +42,9 @@ const buttonStyle = {
   fontSize: 16,
   textAlign: "center",
   textDecoration: "none",
+  display: "block",
+  width: "100%",
+  boxSizing: "border-box",
 } as const;
 
 const TAIWAN_CITIES = [
@@ -56,6 +59,21 @@ function getParam(params: Record<string, string | string[] | undefined>, key: st
   return typeof params[key] === "string" ? params[key] as string : fallback;
 }
 
+function carryHiddenInputs(params: Record<string, string | string[] | undefined>, exclude: string[] = []) {
+  return Object.entries(params)
+    .filter(([key, value]) => typeof value === "string" && !exclude.includes(key))
+    .map(([key, value]) => <input key={key} type="hidden" name={key} value={value as string} />);
+}
+
+function queryWith(params: Record<string, string | string[] | undefined>, changes: Record<string, string>) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (typeof value === "string") query.set(key, value);
+  });
+  Object.entries(changes).forEach(([key, value]) => query.set(key, value));
+  return `/assessment?${query.toString()}`;
+}
+
 export default async function AssessmentPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const step = getParam(params, "step", "1");
@@ -63,6 +81,7 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
   const birthTime = getParam(params, "birthTime");
   const birthCity = getParam(params, "birthCity", "台北市");
   const unknownTime = getParam(params, "unknownTime") === "1";
+  const questionIndex = Math.min(BEHAVIOR_QUESTIONS.length - 1, Math.max(0, Number(getParam(params, "q", "1")) - 1));
   const answers = Object.fromEntries(BEHAVIOR_QUESTIONS.map((question) => [question.id, Number(getParam(params, question.id, "3"))]));
   const assessment = step === "3" ? scoreBehaviorAssessment(answers) : null;
 
@@ -87,7 +106,7 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
   }
 
   const reportPayload = step === "3" ? {
-    schemaVersion: "human-design-fatloss-report-v1",
+    schemaVersion: "human-design-fatloss-report-v2",
     generatedAt: new Date().toISOString(),
     birth: {
       date: birthDate,
@@ -119,13 +138,13 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
           人類圖減脂行動測驗 · STEP {step === "3" ? "03" : step === "2" ? "02" : "01"}
         </div>
         <h1 style={{ fontSize: "clamp(34px,7vw,58px)", lineHeight: 1.04, margin: "18px 0 16px", color: "#17172d" }}>
-          {step === "3" ? "你的綜合結果" : step === "2" ? "8 題行為測驗" : "先填出生資料"}
+          {step === "3" ? "你的綜合結果" : step === "2" ? "18 題行為測驗" : "先填出生資料"}
         </h1>
         <p style={{ margin: 0, fontSize: "clamp(17px,3.8vw,21px)", lineHeight: 1.65, color: "#706c67" }}>
           {step === "3"
-            ? "最後一次呈現 Human Design 與行為測驗結果，避免前面的資訊影響作答。"
+            ? "最後一次呈現 Human Design 與行為測驗結果。"
             : step === "2"
-              ? "請依最近一個月最常出現的真實狀態作答，不用選理想中的自己。"
+              ? "一次只回答一題。請依最近一個月最常出現的真實狀態作答，不用選理想中的自己。"
               : "第一版先服務台灣，時區固定使用 Asia/Taipei。"}
         </p>
       </section>
@@ -134,7 +153,11 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
         <section style={{ ...cardStyle, marginTop: 18 }}>
           <form method="GET" style={{ display: "grid", gap: 16 }}>
             <input type="hidden" name="step" value="2" />
-            <label style={{ display: "grid", gap: 8 }}><strong style={{ fontSize: 17 }}>出生日期</strong><input type="date" name="birthDate" required defaultValue={birthDate} style={inputStyle} /></label>
+            <input type="hidden" name="q" value="1" />
+            <label style={{ display: "grid", gap: 8 }}>
+              <strong style={{ fontSize: 17 }}>出生日期</strong>
+              <input type="date" name="birthDate" required defaultValue={birthDate} style={inputStyle} />
+            </label>
             <label style={{ display: "grid", gap: 8 }}>
               <strong style={{ fontSize: 17 }}>出生時間</strong>
               <input type="time" name="birthTime" defaultValue={birthTime} style={inputStyle} />
@@ -153,34 +176,48 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
         </section>
       )}
 
-      {step === "2" && (
-        <section style={{ ...cardStyle, marginTop: 18 }}>
-          <form method="GET" style={{ display: "grid", gap: 20 }}>
-            <input type="hidden" name="step" value="3" />
-            <input type="hidden" name="birthDate" value={birthDate} />
-            <input type="hidden" name="birthTime" value={birthTime} />
-            <input type="hidden" name="birthCity" value={birthCity} />
-            {unknownTime && <input type="hidden" name="unknownTime" value="1" />}
+      {step === "2" && (() => {
+        const question = BEHAVIOR_QUESTIONS[questionIndex];
+        const currentNumber = questionIndex + 1;
+        const isLast = currentNumber === BEHAVIOR_QUESTIONS.length;
+        const progress = Math.round((currentNumber / BEHAVIOR_QUESTIONS.length) * 100);
+        const previousUrl = currentNumber > 1 ? queryWith(params, { q: String(currentNumber - 1) }) : null;
 
-            {BEHAVIOR_QUESTIONS.map((question, index) => (
-              <fieldset key={question.id} style={{ border: "1px solid #e2ddd4", borderRadius: 18, padding: 18, margin: 0 }}>
-                <legend style={{ fontWeight: 800, color: "#17172d", padding: "0 8px" }}>第 {index + 1} 題</legend>
-                <p style={{ margin: "4px 0 14px", lineHeight: 1.7, color: "#4f4b47" }}>{question.prompt}</p>
-                <div style={{ display: "grid", gap: 9 }}>
+        return (
+          <section style={{ ...cardStyle, marginTop: 18 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 10 }}>
+              <strong style={{ color: "#17172d" }}>第 {currentNumber} / {BEHAVIOR_QUESTIONS.length} 題</strong>
+              <span style={{ color: "#706c67", fontSize: 14 }}>{progress}%</span>
+            </div>
+            <div style={{ height: 10, borderRadius: 999, background: "#ece7de", overflow: "hidden", marginBottom: 28 }}>
+              <div style={{ width: `${progress}%`, height: "100%", background: "#17172d", borderRadius: 999 }} />
+            </div>
+
+            <form method="GET" style={{ display: "grid", gap: 18 }}>
+              {carryHiddenInputs(params, ["q", question.id, "step"])}
+              <input type="hidden" name="step" value={isLast ? "3" : "2"} />
+              {!isLast && <input type="hidden" name="q" value={String(currentNumber + 1)} />}
+
+              <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+                <legend style={{ fontWeight: 800, color: "#17172d", fontSize: "clamp(22px,5vw,30px)", lineHeight: 1.45, marginBottom: 22 }}>
+                  {question.prompt}
+                </legend>
+                <div style={{ display: "grid", gap: 10 }}>
                   {ANSWER_OPTIONS.map(option => (
-                    <label key={option.value} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 12px", border: "1px solid #e8e3db", borderRadius: 12 }}>
-                      <input type="radio" name={question.id} value={option.value} required defaultChecked={option.value === 3} />
+                    <label key={option.value} style={{ display: "flex", gap: 12, alignItems: "center", padding: "14px 15px", border: "1px solid #e2ddd4", borderRadius: 14, background: "#fff", lineHeight: 1.45 }}>
+                      <input type="radio" name={question.id} value={option.value} required defaultChecked={getParam(params, question.id) === String(option.value)} style={{ width: 19, height: 19, flex: "0 0 auto" }} />
                       <span>{option.label}</span>
                     </label>
                   ))}
                 </div>
               </fieldset>
-            ))}
 
-            <button type="submit" style={buttonStyle}>完成測驗並查看結果</button>
-          </form>
-        </section>
-      )}
+              <button type="submit" style={buttonStyle}>{isLast ? "完成測驗並查看結果" : "下一題"}</button>
+              {previousUrl && <a href={previousUrl} style={{ textAlign: "center", color: "#5f5a54", fontWeight: 700, textDecoration: "none", padding: 10 }}>← 上一題</a>}
+            </form>
+          </section>
+        );
+      })()}
 
       {step === "3" && assessment && (
         <>
@@ -224,9 +261,12 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
 
           <section style={{ ...cardStyle, marginTop: 18 }}>
             <h2 style={{ marginTop: 0, color: "#17172d" }}>匯出報告</h2>
-            <p style={{ color: "#706c67", lineHeight: 1.6 }}>PNG 會輸出上方完整報告；JSON 可一鍵複製，之後直接貼給 GPT 做進一步解析。</p>
+            <p style={{ color: "#706c67", lineHeight: 1.6 }}>目前先保留 JSON 與舊版 PNG 按鈕。下一階段會依定稿規格拆成「人類圖 PNG」、「行為分析 PNG」與 2 頁 PDF。</p>
             <ReportActions reportJson={reportJson} reportElementId="assessment-report" />
-            <details style={{ marginTop: 14 }}><summary style={{ cursor: "pointer", fontWeight: 700 }}>查看完整 JSON</summary><textarea readOnly value={reportJson} style={{ ...inputStyle, minHeight: 260, marginTop: 10, fontFamily: "monospace", fontSize: 12 }} /></details>
+            <details style={{ marginTop: 14 }}>
+              <summary style={{ cursor: "pointer", fontWeight: 700 }}>查看完整 JSON</summary>
+              <textarea readOnly value={reportJson} style={{ ...inputStyle, minHeight: 260, marginTop: 10, fontFamily: "monospace", fontSize: 12 }} />
+            </details>
           </section>
         </>
       )}
