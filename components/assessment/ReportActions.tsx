@@ -25,14 +25,6 @@ function triggerDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
-function getSvgMetrics(svg: SVGSVGElement) {
-  const vb = svg.viewBox.baseVal;
-  return {
-    width: vb?.width || Number(svg.getAttribute("width")) || 900,
-    height: vb?.height || Number(svg.getAttribute("height")) || 760,
-  };
-}
-
 function esc(value: string) {
   return value.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[ch] || ch));
 }
@@ -40,20 +32,15 @@ function esc(value: string) {
 function buildHumanDesignFrame(svg: SVGSVGElement, meta: { name: string; birthDate: string; birthTime: string | null; birthCity: string; humanSummary: string }) {
   const clone = svg.cloneNode(true) as SVGSVGElement;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  const { width, height } = getSvgMetrics(clone);
 
-  const frameWidth = 900;
-  const frameHeight = 1600;
-  const chartTop = 300;
-  const chartBottom = 80;
-  const availableHeight = frameHeight - chartTop - chartBottom;
-  const availableWidth = 820;
-  const scale = Math.min(availableWidth / width, availableHeight / height);
-  const drawWidth = width * scale;
-  const x = (frameWidth - drawWidth) / 2;
+  // Export is intentionally different from the web preview. The original BodyGraph
+  // contains wide Design/Personality side columns, which make the core chart too small
+  // on a 9:16 report. Crop to the core BodyGraph and give it roughly 70% of the page.
+  const coreViewBox = "215 25 470 720";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1600" width="900" height="1600">
     <rect width="900" height="1600" fill="#f7f3ea"/>
+
     <g transform="translate(32 28)">
       <rect width="836" height="220" rx="28" fill="#17172d"/>
       <text x="30" y="42" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#d2a55c">可樂吉健康研究所</text>
@@ -69,7 +56,12 @@ function buildHumanDesignFrame(svg: SVGSVGElement, meta: { name: string; birthDa
       <text x="620" y="156" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生地</text>
       <text x="620" y="180" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthCity || "—")}</text>
     </g>
-    <g transform="translate(${x} ${chartTop}) scale(${scale})">${clone.innerHTML}</g>
+
+    <rect x="32" y="270" width="836" height="1260" rx="28" fill="#fbfaf7" stroke="#e0dcd4"/>
+    <svg x="70" y="292" width="760" height="1185" viewBox="${coreViewBox}" preserveAspectRatio="xMidYMid meet">
+      ${clone.innerHTML}
+    </svg>
+
     <text x="450" y="1574" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#8b877f">Human Design × Fat Loss Action Report</text>
   </svg>`;
 }
