@@ -75,6 +75,17 @@ function queryWith(params: Record<string, string | string[] | undefined>, change
   return `/assessment?${query.toString()}`;
 }
 
+function makeAssessmentId(name: string, birthDate: string, answers: Record<string, number>) {
+  const raw = `${name}|${birthDate}|${BEHAVIOR_QUESTIONS.map(q => answers[q.id] ?? 0).join("")}`;
+  let hash = 2166136261;
+  for (let i = 0; i < raw.length; i += 1) {
+    hash ^= raw.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const suffix = (hash >>> 0).toString(36).toUpperCase().padStart(7, "0").slice(-7);
+  return `HD-${birthDate.replace(/-/g, "").slice(2)}-${suffix}`;
+}
+
 export default async function AssessmentPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const step = getParam(params, "step", "1");
@@ -86,6 +97,8 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
   const questionIndex = Math.min(BEHAVIOR_QUESTIONS.length - 1, Math.max(0, Number(getParam(params, "q", "1")) - 1));
   const answers = Object.fromEntries(BEHAVIOR_QUESTIONS.map((question) => [question.id, Number(getParam(params, question.id, "3"))]));
   const assessment = step === "3" ? scoreBehaviorAssessment(answers) : null;
+  const assessmentId = step === "3" ? makeAssessmentId(name, birthDate, answers) : "";
+  const developerPreview = process.env.NODE_ENV !== "production" && getParam(params, "preview") === "1";
 
   let chart: ReturnType<typeof buildCoreHumanDesignChart> | null = null;
   let personalityActivations: ReturnType<typeof buildHumanDesignActivations> = [];
@@ -108,7 +121,8 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
   }
 
   const reportPayload = step === "3" ? {
-    schemaVersion: "human-design-fatloss-report-v3",
+    schemaVersion: "human-design-fatloss-report-v4",
+    assessmentId,
     generatedAt: new Date().toISOString(),
     profile: { name },
     birth: {
@@ -142,11 +156,11 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
           人類圖減脂行動測驗 · STEP {step === "3" ? "03" : step === "2" ? "02" : "01"}
         </div>
         <h1 style={{ fontSize: "clamp(34px,7vw,58px)", lineHeight: 1.04, margin: "18px 0 16px", color: "#17172d" }}>
-          {step === "3" ? "你的綜合結果" : step === "2" ? "18 題行為測驗" : "先填基本資料"}
+          {step === "3" ? "測驗已完成" : step === "2" ? "18 題行為測驗" : "先填基本資料"}
         </h1>
         <p style={{ margin: 0, fontSize: "clamp(17px,3.8vw,21px)", lineHeight: 1.65, color: "#706c67" }}>
           {step === "3"
-            ? "最後一次呈現 Human Design 與行為測驗結果。"
+            ? "你的資料已完成計算。正式版本將由後台產生完整報告，再由崇銘老師提供給你。"
             : step === "2"
               ? "一次只回答一題。請依最近一個月最常出現的真實狀態作答，不用選理想中的自己。"
               : "第一版先服務台灣，時區固定使用 Asia/Taipei。"}
@@ -220,20 +234,41 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
                 </div>
               </fieldset>
 
-              <button type="submit" style={buttonStyle}>{isLast ? "完成測驗並查看結果" : "下一題"}</button>
+              <button type="submit" style={buttonStyle}>{isLast ? "送出測驗" : "下一題"}</button>
               {previousUrl && <a href={previousUrl} style={{ textAlign: "center", color: "#5f5a54", fontWeight: 700, textDecoration: "none", padding: 10 }}>← 上一題</a>}
             </form>
           </section>
         );
       })()}
 
-      {step === "3" && assessment && (
+      {step === "3" && assessment && !developerPreview && (
+        <section style={{ ...cardStyle, marginTop: 18, textAlign: "center" }}>
+          <div style={{ width: 64, height: 64, margin: "0 auto 18px", borderRadius: "50%", display: "grid", placeItems: "center", background: "#17172d", color: "#fff", fontSize: 30, fontWeight: 900 }}>✓</div>
+          <h2 style={{ margin: "0 0 12px", fontSize: "clamp(28px,6vw,40px)", color: "#17172d" }}>謝謝你完成測驗</h2>
+          <p style={{ margin: "0 auto", maxWidth: 620, color: "#706c67", lineHeight: 1.8, fontSize: 17 }}>完整的人類圖與減脂行為分析將由後台整理。請保存下面的測驗編號，並跟崇銘老師領取你的完整解析報告。</p>
+          <div style={{ margin: "28px auto 20px", maxWidth: 520, padding: "22px 18px", borderRadius: 20, background: "#f5f1e8", border: "1px solid #ded9cf" }}>
+            <div style={{ fontSize: 13, color: "#706c67", marginBottom: 8 }}>你的測驗編號</div>
+            <div style={{ fontSize: "clamp(24px,6vw,34px)", fontWeight: 900, letterSpacing: ".04em", color: "#17172d", wordBreak: "break-word" }}>{assessmentId}</div>
+          </div>
+          <div style={{ fontWeight: 800, color: "#17172d", fontSize: 18 }}>請跟崇銘老師領取完整報告</div>
+          {process.env.NODE_ENV !== "production" && (
+            <a href={queryWith(params, { preview: "1" })} style={{ display: "inline-block", marginTop: 26, color: "#706c67", fontWeight: 700, fontSize: 13 }}>開發預覽：查看後台報告</a>
+          )}
+        </section>
+      )}
+
+      {step === "3" && assessment && developerPreview && (
         <>
+          <section style={{ ...cardStyle, marginTop: 18, background: "#fff8e8", borderColor: "#e7d7a5" }}>
+            <strong style={{ color: "#7c641d" }}>開發預覽模式</strong>
+            <p style={{ margin: "8px 0 0", color: "#706c67", lineHeight: 1.65 }}>這個區塊只在開發環境顯示，方便目前調整報告。正式 production 不會讓填答者看到。</p>
+          </section>
+
           <div style={{ display: "grid", gap: 18, marginTop: 18 }}>
             <section style={cardStyle}>
               <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: ".05em", opacity: 0.62 }}>HUMAN DESIGN × BEHAVIOR</div>
-              <h2 style={{ margin: "10px 0 8px", color: "#17172d" }}>綜合結果</h2>
-              <p style={{ margin: 0, color: "#706c67", lineHeight: 1.65 }}>{name} · {birthDate} · {unknownTime ? "時間未知" : birthTime} · {birthCity}</p>
+              <h2 style={{ margin: "10px 0 8px", color: "#17172d" }}>後台報告預覽</h2>
+              <p style={{ margin: 0, color: "#706c67", lineHeight: 1.65 }}>編號 {assessmentId} · {name} · {birthDate} · {unknownTime ? "時間未知" : birthTime} · {birthCity}</p>
             </section>
 
             <section style={cardStyle}>
@@ -257,8 +292,8 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
           </div>
 
           <section style={{ ...cardStyle, marginTop: 18 }}>
-            <h2 style={{ marginTop: 0, color: "#17172d" }}>匯出報告</h2>
-            <p style={{ color: "#706c67", lineHeight: 1.6 }}>兩張 PNG 統一為 9:16 直式報告版型，並加入姓名、出生日期、時間與出生地。</p>
+            <h2 style={{ marginTop: 0, color: "#17172d" }}>後台匯出工具</h2>
+            <p style={{ color: "#706c67", lineHeight: 1.6 }}>兩張 PNG 均為 9:16 直式報告版型。這些下載功能之後會移到真正的後台頁面。</p>
             <ReportActions reportJson={reportJson} humanDesignElementId={chart ? "human-design-svg-source" : undefined} behaviorSvgId="behavior-report-svg" name={name} birthDate={birthDate} birthTime={unknownTime ? null : birthTime} birthCity={birthCity} humanSummary={humanSummary} />
             <details style={{ marginTop: 14 }}>
               <summary style={{ cursor: "pointer", fontWeight: 700 }}>查看完整 JSON</summary>
