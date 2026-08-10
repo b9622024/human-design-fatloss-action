@@ -29,39 +29,122 @@ function esc(value: string) {
   return value.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[ch] || ch));
 }
 
+function translateType(value: string) {
+  const map: Record<string, string> = {
+    Generator: "生產者",
+    "Manifesting Generator": "顯示生產者",
+    Projector: "投射者",
+    Manifestor: "顯示者",
+    Reflector: "反映者",
+  };
+  return map[value] ?? value;
+}
+
+function translateAuthority(value: string) {
+  const map: Record<string, string> = {
+    Sacral: "薦骨權威",
+    Emotional: "情緒權威",
+    Splenic: "脾臟權威",
+    Ego: "意志力權威",
+    Self: "自我投射權威",
+    Mental: "環境權威",
+    Lunar: "月亮週期權威",
+  };
+  return map[value] ?? value;
+}
+
+function translateDefinition(value: string) {
+  const map: Record<string, string> = {
+    "Single Definition": "單一定義",
+    "Split Definition": "二分定義",
+    "Triple Split Definition": "三分定義",
+    "Quadruple Split Definition": "四分定義",
+    "No Definition": "無定義",
+  };
+  return map[value] ?? value;
+}
+
+function parseHumanSummary(summary: string) {
+  const parts = summary.split(" · ");
+  return {
+    type: parts[0] || "—",
+    authority: parts[1] || "—",
+    profile: parts[2] || "—",
+    definition: parts[3] || "—",
+  };
+}
+
 function buildHumanDesignFrame(svg: SVGSVGElement, meta: { name: string; birthDate: string; birthTime: string | null; birthCity: string; humanSummary: string }) {
   const clone = svg.cloneNode(true) as SVGSVGElement;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const summary = parseHumanSummary(meta.humanSummary);
 
-  // Export is intentionally different from the web preview. The original BodyGraph
-  // contains wide Design/Personality side columns, which make the core chart too small
-  // on a 9:16 report. Crop to the core BodyGraph and give it roughly 70% of the page.
+  // The source BodyGraph is 900px wide. Export it as three coordinated crops:
+  // left Design panel, enlarged core BodyGraph, and right Personality panel.
+  // This preserves the original data while keeping the chart itself dominant.
+  const leftViewBox = "0 15 190 360";
   const coreViewBox = "215 25 470 720";
+  const rightViewBox = "710 15 190 360";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1600" width="900" height="1600">
     <rect width="900" height="1600" fill="#f7f3ea"/>
 
-    <g transform="translate(32 28)">
-      <rect width="836" height="220" rx="28" fill="#17172d"/>
-      <text x="30" y="42" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#d2a55c">可樂吉健康研究所</text>
-      <text x="30" y="86" font-family="Arial, sans-serif" font-size="32" font-weight="800" fill="#ffffff">Human Design 人類圖</text>
-      <text x="30" y="114" font-family="Arial, sans-serif" font-size="14" fill="#d8d7e0">${esc(meta.humanSummary)}</text>
-      <line x1="30" y1="132" x2="806" y2="132" stroke="#45445b"/>
-      <text x="30" y="156" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">姓名</text>
-      <text x="30" y="180" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.name || "未填寫")}</text>
-      <text x="220" y="156" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生日期</text>
-      <text x="220" y="180" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthDate || "—")}</text>
-      <text x="420" y="156" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生時間</text>
-      <text x="420" y="180" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthTime || "未知")}</text>
-      <text x="620" y="156" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生地</text>
-      <text x="620" y="180" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthCity || "—")}</text>
+    <g transform="translate(20 20)">
+      <rect width="860" height="230" rx="30" fill="#17172d"/>
+      <text x="38" y="46" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#d2a55c">可樂吉健康研究所</text>
+      <text x="38" y="92" font-family="Arial, sans-serif" font-size="34" font-weight="800" fill="#ffffff">Human Design 人類圖</text>
+      <text x="38" y="121" font-family="Arial, sans-serif" font-size="14" fill="#d8d7e0">${esc(meta.humanSummary)}</text>
+      <line x1="38" y1="140" x2="822" y2="140" stroke="#45445b"/>
+      <text x="38" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">姓名</text>
+      <text x="38" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.name || "未填寫")}</text>
+      <text x="235" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生日期</text>
+      <text x="235" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthDate || "—")}</text>
+      <text x="438" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生時間</text>
+      <text x="438" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthTime || "未知")}</text>
+      <text x="638" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生地</text>
+      <text x="638" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthCity || "—")}</text>
     </g>
 
-    <rect x="32" y="270" width="836" height="1260" rx="28" fill="#fbfaf7" stroke="#e0dcd4"/>
-    <svg x="70" y="292" width="760" height="1185" viewBox="${coreViewBox}" preserveAspectRatio="xMidYMid meet">
+    <rect x="20" y="270" width="860" height="1195" rx="30" fill="#fbfaf7" stroke="#ded9cf"/>
+
+    <text x="48" y="320" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="#d84238">設計 Design</text>
+    <text x="852" y="320" text-anchor="end" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="#17172d">人格 Personality</text>
+
+    <svg x="34" y="332" width="175" height="520" viewBox="${leftViewBox}" preserveAspectRatio="xMinYMin meet">
       ${clone.innerHTML}
     </svg>
 
+    <svg x="176" y="292" width="548" height="1055" viewBox="${coreViewBox}" preserveAspectRatio="xMidYMid meet">
+      ${clone.innerHTML}
+    </svg>
+
+    <svg x="691" y="332" width="175" height="520" viewBox="${rightViewBox}" preserveAspectRatio="xMaxYMin meet">
+      ${clone.innerHTML}
+    </svg>
+
+    <g transform="translate(48 1344)">
+      <rect width="804" height="92" rx="20" fill="#f3eee4" stroke="#e1dacd"/>
+      <line x1="201" y1="14" x2="201" y2="78" stroke="#ddd5c8"/>
+      <line x1="402" y1="14" x2="402" y2="78" stroke="#ddd5c8"/>
+      <line x1="603" y1="14" x2="603" y2="78" stroke="#ddd5c8"/>
+
+      <text x="18" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">類型 Type</text>
+      <text x="18" y="55" font-family="Arial, sans-serif" font-size="14" font-weight="800" fill="#17172d">${esc(translateType(summary.type))}</text>
+      <text x="18" y="74" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.type)}</text>
+
+      <text x="219" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">權威 Authority</text>
+      <text x="219" y="55" font-family="Arial, sans-serif" font-size="14" font-weight="800" fill="#17172d">${esc(translateAuthority(summary.authority))}</text>
+      <text x="219" y="74" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.authority)}</text>
+
+      <text x="420" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">人生角色 Profile</text>
+      <text x="420" y="57" font-family="Arial, sans-serif" font-size="16" font-weight="800" fill="#17172d">${esc(summary.profile)}</text>
+
+      <text x="621" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">定義 Definition</text>
+      <text x="621" y="55" font-family="Arial, sans-serif" font-size="14" font-weight="800" fill="#17172d">${esc(translateDefinition(summary.definition))}</text>
+      <text x="621" y="74" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.definition)}</text>
+    </g>
+
+    <text x="450" y="1500" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#706c67">人類圖是一張自我探索地圖，用來理解你的決策方式、能量運作與行動節奏。</text>
     <text x="450" y="1574" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#8b877f">Human Design × Fat Loss Action Report</text>
   </svg>`;
 }
