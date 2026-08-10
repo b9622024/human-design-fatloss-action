@@ -98,73 +98,76 @@ function buildHumanDesignFrame(svg: SVGSVGElement, meta: { name: string; birthDa
   const summary = parseHumanSummary(meta.humanSummary);
   const profileEnglish = profileDescription(summary.profile);
 
-  // Keep Design and Personality as independent data columns, while enlarging only
-  // the core BodyGraph. The source chart geometry is never mutated, so gates and
-  // channel routes remain on the canonical renderer coordinates.
-  const leftViewBox = "0 15 190 360";
-  const coreViewBox = "230 25 440 720";
-  const rightViewBox = "710 15 190 360";
+  // Export only changes framing/cropping. The BodyGraph geometry remains untouched,
+  // so gates, centers, rails, and channels keep their canonical coordinates.
+  const leftViewBox = "0 12 195 355";
+  const coreViewBox = "250 28 400 705";
+  const rightViewBox = "705 12 195 355";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1600" width="900" height="1600">
     <rect width="900" height="1600" fill="#f7f3ea"/>
 
-    <g transform="translate(20 20)">
-      <rect width="860" height="230" rx="30" fill="#17172d"/>
+    <g transform="translate(18 16)">
+      <rect width="864" height="232" rx="30" fill="#17172d"/>
       <text x="38" y="46" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#d2a55c">可樂吉健康研究所</text>
       <text x="38" y="92" font-family="Arial, sans-serif" font-size="34" font-weight="800" fill="#ffffff">Human Design 人類圖</text>
       <text x="38" y="121" font-family="Arial, sans-serif" font-size="14" fill="#d8d7e0">${esc(meta.humanSummary)}</text>
-      <line x1="38" y1="140" x2="822" y2="140" stroke="#45445b"/>
+      <line x1="38" y1="140" x2="826" y2="140" stroke="#45445b"/>
       <text x="38" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">姓名</text>
       <text x="38" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.name || "未填寫")}</text>
-      <text x="235" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生日期</text>
-      <text x="235" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthDate || "—")}</text>
-      <text x="438" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生時間</text>
-      <text x="438" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthTime || "未知")}</text>
-      <text x="638" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生地</text>
-      <text x="638" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthCity || "—")}</text>
+      <text x="238" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生日期</text>
+      <text x="238" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthDate || "—")}</text>
+      <text x="442" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生時間</text>
+      <text x="442" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthTime || "未知")}</text>
+      <text x="642" y="166" font-family="Arial, sans-serif" font-size="11" fill="#9998aa">出生地</text>
+      <text x="642" y="194" font-family="Arial, sans-serif" font-size="15" fill="#ffffff">${esc(meta.birthCity || "—")}</text>
     </g>
 
-    <rect x="20" y="270" width="860" height="1240" rx="30" fill="#fbfaf7" stroke="#ded9cf"/>
+    <rect x="18" y="266" width="864" height="1252" rx="30" fill="#fbfaf7" stroke="#ded9cf"/>
 
-    <text x="48" y="316" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#d84238">設計 Design</text>
-    <text x="852" y="316" text-anchor="end" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#17172d">人格 Personality</text>
+    <text x="46" y="315" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#d84238">設計 Design</text>
+    <text x="854" y="315" text-anchor="end" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#17172d">人格 Personality</text>
 
-    <svg x="28" y="330" width="152" height="500" viewBox="${leftViewBox}" preserveAspectRatio="xMinYMin meet">
+    <svg x="35" y="330" width="175" height="515" viewBox="${leftViewBox}" preserveAspectRatio="xMinYMin meet">
       ${clone.innerHTML}
     </svg>
 
-    <svg x="122" y="286" width="656" height="1072" viewBox="${coreViewBox}" preserveAspectRatio="xMidYMid meet">
+    <svg x="145" y="300" width="610" height="1085" viewBox="${coreViewBox}" preserveAspectRatio="xMidYMid meet">
       ${clone.innerHTML}
     </svg>
 
-    <svg x="720" y="330" width="152" height="500" viewBox="${rightViewBox}" preserveAspectRatio="xMaxYMin meet">
+    <svg x="690" y="330" width="175" height="515" viewBox="${rightViewBox}" preserveAspectRatio="xMaxYMin meet">
       ${clone.innerHTML}
     </svg>
 
-    <g transform="translate(42 1360)">
-      <rect width="816" height="108" rx="20" fill="#f3eee4" stroke="#e1dacd"/>
-      <line x1="204" y1="14" x2="204" y2="94" stroke="#ddd5c8"/>
-      <line x1="408" y1="14" x2="408" y2="94" stroke="#ddd5c8"/>
-      <line x1="612" y1="14" x2="612" y2="94" stroke="#ddd5c8"/>
+    <g transform="translate(44 1350)">
+      <rect width="812" height="112" rx="22" fill="#f3eee4" stroke="#e1dacd"/>
+      <line x1="203" y1="16" x2="203" y2="96" stroke="#ddd5c8"/>
+      <line x1="406" y1="16" x2="406" y2="96" stroke="#ddd5c8"/>
+      <line x1="609" y1="16" x2="609" y2="96" stroke="#ddd5c8"/>
 
-      <text x="18" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">類型 Type</text>
-      <text x="18" y="57" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#17172d">${esc(translateType(summary.type))}</text>
-      <text x="18" y="80" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.type)}</text>
+      <circle cx="25" cy="31" r="10" fill="#5aa06b"/>
+      <text x="43" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">類型 Type</text>
+      <text x="18" y="60" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#17172d">${esc(translateType(summary.type))}</text>
+      <text x="18" y="82" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.type)}</text>
 
-      <text x="222" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">權威 Authority</text>
-      <text x="222" y="57" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#17172d">${esc(translateAuthority(summary.authority))}</text>
-      <text x="222" y="80" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.authority)}</text>
+      <circle cx="228" cy="31" r="10" fill="#d99a4d"/>
+      <text x="246" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">權威 Authority</text>
+      <text x="221" y="60" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#17172d">${esc(translateAuthority(summary.authority))}</text>
+      <text x="221" y="82" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.authority)}</text>
 
-      <text x="426" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">人生角色 Profile</text>
-      <text x="426" y="57" font-family="Arial, sans-serif" font-size="16" font-weight="800" fill="#17172d">${esc(summary.profile)}</text>
-      ${profileEnglish ? `<text x="426" y="80" font-family="Arial, sans-serif" font-size="9.5" fill="#77736c">${esc(profileEnglish)}</text>` : ""}
+      <circle cx="431" cy="31" r="10" fill="#7772a9"/>
+      <text x="449" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">人生角色 Profile</text>
+      <text x="424" y="60" font-family="Arial, sans-serif" font-size="16" font-weight="800" fill="#17172d">${esc(summary.profile)}</text>
+      <text x="424" y="82" font-family="Arial, sans-serif" font-size="9.5" fill="#77736c">${esc(profileEnglish)}</text>
 
-      <text x="630" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">定義 Definition</text>
-      <text x="630" y="57" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#17172d">${esc(translateDefinition(summary.definition))}</text>
-      <text x="630" y="80" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.definition)}</text>
+      <circle cx="634" cy="31" r="10" fill="#5d82b4"/>
+      <text x="652" y="28" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#8b877f">定義 Definition</text>
+      <text x="627" y="60" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#17172d">${esc(translateDefinition(summary.definition))}</text>
+      <text x="627" y="82" font-family="Arial, sans-serif" font-size="10" fill="#77736c">${esc(summary.definition)}</text>
     </g>
 
-    <text x="450" y="1496" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#706c67">人類圖是一張自我探索地圖，用來理解你的決策方式、能量運作與行動節奏。</text>
+    <text x="450" y="1492" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#706c67">人類圖是一張自我探索地圖，用來理解你的決策方式、能量運作與行動節奏。</text>
     <text x="450" y="1574" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#8b877f">Human Design × Fat Loss Action Report</text>
   </svg>`;
 }
@@ -202,7 +205,6 @@ async function svgElementToPng(svg: SVGSVGElement, filename: string, scale = 2, 
     const pngBlob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(result => result ? resolve(result) : reject(new Error("PNG 產生失敗")), "image/png", 1);
     });
-
     triggerDownload(pngBlob, filename);
   } finally {
     URL.revokeObjectURL(svgUrl);
