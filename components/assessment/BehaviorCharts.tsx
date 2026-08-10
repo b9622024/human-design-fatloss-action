@@ -15,25 +15,36 @@ type Assessment = {
   };
 };
 
-type Props = { assessment: Assessment };
+type Props = {
+  assessment: Assessment;
+  name?: string;
+  birthDate?: string;
+  birthTime?: string | null;
+  birthCity?: string;
+};
 
 const ink = "#17172d";
 const muted = "#706c67";
 const grid = "#ded9cf";
-const soft = "#f5f1e8";
-const brand = "#a97540";
+const soft = "#f7f4ee";
+const brand = "#d2a55c";
+const accent = "#8d6bd8";
 
 function polar(cx: number, cy: number, r: number, angle: number) {
   const rad = (angle - 90) * Math.PI / 180;
   return [cx + Math.cos(rad) * r, cy + Math.sin(rad) * r] as const;
 }
 
-export function BehaviorCharts({ assessment }: Props) {
+function prefPosition(value: number) {
+  return Math.max(0, Math.min(100, value));
+}
+
+export function BehaviorCharts({ assessment, name = "未填寫", birthDate = "", birthTime = null, birthCity = "" }: Props) {
   const dims = assessment.dimensions;
   const byId = Object.fromEntries(dims.map(d => [d.id, d.score])) as Record<string, number>;
   const ranked = [...dims].sort((a, b) => a.score - b.score);
 
-  const radarCx = 185, radarCy = 190, radarR = 120;
+  const radarCx = 225, radarCy = 195, radarR = 125;
   const radarPoints = dims.map((d, i) => {
     const [x, y] = polar(radarCx, radarCy, radarR * d.score / 100, i * 60);
     return `${x},${y}`;
@@ -48,86 +59,84 @@ export function BehaviorCharts({ assessment }: Props) {
     ["環境阻力", 100 - (byId.environment ?? 0)],
   ] as const;
 
-  const tensionPairs = [
-    ["計畫 vs 彈性", byId.planning ?? 0, byId.recovery ?? 0],
-    ["覺察 vs 情緒", byId.awareness ?? 0, byId.emotion ?? 0],
-    ["執行 vs 環境", byId.consistency ?? 0, byId.environment ?? 0],
+  const planPreference = prefPosition(50 + assessment.derived.planFlexBalance / 2);
+  const supportPreference = prefPosition(assessment.derived.externalSupport);
+  const rhythmPreference = prefPosition(50 + ((byId.recovery ?? 50) - (byId.consistency ?? 50)) / 2);
+
+  const preferences = [
+    ["計畫方式", "自由彈性", "明確規則", planPreference],
+    ["支援方式", "獨立執行", "環境支持", supportPreference],
+    ["執行節奏", "穩定重複", "彈性恢復", rhythmPreference],
   ] as const;
 
   return (
-    <svg id="behavior-report-svg" viewBox="0 0 1600 900" width="100%" role="img" aria-label="減脂行為分析 16 比 9 報告">
-      <rect width="1600" height="900" fill="#fbfaf7" rx="32" />
+    <svg id="behavior-report-svg" viewBox="0 0 900 1600" width="100%" role="img" aria-label="減脂行為分析 9 比 16 報告">
+      <rect width="900" height="1600" fill="#f7f3ea" />
 
-      <text x="60" y="58" fontSize="26" fontWeight="800" fill={brand}>可樂吉健康研究所</text>
-      <text x="60" y="100" fontSize="34" fontWeight="800" fill={ink}>減脂行為分析</text>
-      <text x="60" y="132" fontSize="17" fill={muted}>18 題測驗 · 五張分析圖</text>
+      <g transform="translate(32 28)">
+        <rect width="836" height="200" rx="28" fill={ink} />
+        <text x="30" y="42" fontSize="15" fontWeight="800" fill={brand}>可樂吉健康研究所</text>
+        <text x="30" y="86" fontSize="32" fontWeight="800" fill="#fff">人類圖減脂行動報告</text>
+        <text x="30" y="114" fontSize="15" fill="#d8d7e0">Human Design × 行為問卷</text>
+        <line x1="30" y1="130" x2="806" y2="130" stroke="#45445b" />
+        <text x="30" y="154" fontSize="11" fill="#9998aa">姓名</text><text x="30" y="178" fontSize="15" fill="#fff">{name || "未填寫"}</text>
+        <text x="220" y="154" fontSize="11" fill="#9998aa">出生日期</text><text x="220" y="178" fontSize="15" fill="#fff">{birthDate || "—"}</text>
+        <text x="420" y="154" fontSize="11" fill="#9998aa">出生時間</text><text x="420" y="178" fontSize="15" fill="#fff">{birthTime || "未知"}</text>
+        <text x="620" y="154" fontSize="11" fill="#9998aa">出生地</text><text x="620" y="178" fontSize="15" fill="#fff">{birthCity || "—"}</text>
+      </g>
 
-      <g transform="translate(50 165)">
-        <rect width="430" height="330" rx="24" fill={soft} />
-        <text x="24" y="40" fontSize="22" fontWeight="800" fill={ink}>① 六大行為輪廓</text>
+      <g transform="translate(32 250)">
+        <rect width="836" height="350" rx="24" fill="#fff" stroke="#e0dcd4" />
+        <text x="24" y="42" fontSize="23" fontWeight="800" fill={ink}>01 六大行為輪廓</text>
         {[0.25,0.5,0.75,1].map(level => {
           const pts = dims.map((_, i) => polar(radarCx, radarCy, radarR * level, i * 60).join(",")).join(" ");
           return <polygon key={level} points={pts} fill="none" stroke={grid} strokeWidth="1.2" />;
         })}
         {dims.map((d, i) => {
           const [x1,y1] = polar(radarCx, radarCy, radarR, i * 60);
-          const [lx,ly] = polar(radarCx, radarCy, radarR + 26, i * 60);
-          return <g key={d.id}><line x1={radarCx} y1={radarCy} x2={x1} y2={y1} stroke={grid} /><text x={lx} y={ly} textAnchor="middle" fontSize="12" fill={ink}>{d.label}</text></g>;
+          const [lx,ly] = polar(radarCx, radarCy, radarR + 27, i * 60);
+          return <g key={d.id}><line x1={radarCx} y1={radarCy} x2={x1} y2={y1} stroke={grid} /><text x={lx} y={ly} textAnchor="middle" fontSize="11" fill={ink}>{d.label}</text></g>;
         })}
-        <polygon points={radarPoints} fill="rgba(23,23,45,0.12)" stroke={ink} strokeWidth="3" />
-        {dims.map((d,i) => { const [x,y] = polar(radarCx, radarCy, radarR * d.score / 100, i * 60); return <g key={d.id}><circle cx={x} cy={y} r="5" fill={ink}/><text x={x} y={y-9} textAnchor="middle" fontSize="12" fontWeight="700" fill={ink}>{d.score}</text></g>; })}
+        <polygon points={radarPoints} fill="rgba(141,107,216,0.18)" stroke={accent} strokeWidth="3" />
+        {dims.map((d,i) => { const [x,y] = polar(radarCx, radarCy, radarR * d.score / 100, i * 60); return <g key={d.id}><circle cx={x} cy={y} r="5" fill={accent}/><text x={x} y={y-9} textAnchor="middle" fontSize="11" fontWeight="700" fill={ink}>{d.score}</text></g>; })}
+        <g transform="translate(490 92)">
+          {dims.map((d,i) => <g key={d.id} transform={`translate(0 ${i*38})`}><text x="0" y="14" fontSize="13" fill={ink}>{d.label}</text><rect x="145" y="2" width="150" height="14" rx="7" fill="#ece9f0"/><rect x="145" y="2" width={d.score*1.5} height="14" rx="7" fill={accent}/><text x="315" y="14" fontSize="13" fontWeight="700" fill={ink}>{d.score}</text></g>)}
+        </g>
       </g>
 
-      <g transform="translate(500 165)">
-        <rect width="430" height="330" rx="24" fill={soft} />
-        <text x="24" y="40" fontSize="22" fontWeight="800" fill={ink}>② 執行模式四象限</text>
-        <line x1="70" y1="275" x2="380" y2="275" stroke={ink} strokeWidth="2" />
-        <line x1="70" y1="275" x2="70" y2="75" stroke={ink} strokeWidth="2" />
-        <line x1="225" y1="75" x2="225" y2="275" stroke={grid} strokeDasharray="7 7" />
-        <line x1="70" y1="175" x2="380" y2="175" stroke={grid} strokeDasharray="7 7" />
-        <text x="72" y="302" fontSize="12" fill={muted}>較重視計畫</text><text x="300" y="302" fontSize="12" fill={muted}>較重視彈性</text>
-        <text x="18" y="88" fontSize="12" fill={muted}>高執行</text><text x="18" y="274" fontSize="12" fill={muted}>低執行</text>
-        {(() => {
-          const x = 70 + ((byId.recovery ?? 50) / 100) * 310;
-          const y = 275 - (assessment.derived.executionReadiness / 100) * 200;
-          return <g><circle cx={x} cy={y} r="17" fill={ink}/><text x={x} y={y+5} textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">你</text></g>;
-        })()}
+      <g transform="translate(32 620)">
+        <rect width="836" height="250" rx="24" fill="#fff" stroke="#e0dcd4" />
+        <text x="24" y="42" fontSize="23" fontWeight="800" fill={ink}>02 執行偏好</text>
+        <text x="24" y="68" fontSize="12" fill={muted}>位置代表傾向，不代表能力高低。</text>
+        {preferences.map(([label,left,right,value], i) => {
+          const y = 105 + i * 58;
+          const x = 175 + (value / 100) * 500;
+          return <g key={label}><text x="24" y={y+4} fontSize="13" fontWeight="700" fill={ink}>{label}</text><text x="175" y={y-12} fontSize="11" fill={muted}>{left}</text><text x="675" y={y-12} textAnchor="end" fontSize="11" fill={muted}>{right}</text><line x1="175" y1={y} x2="675" y2={y} stroke="#d7d2ca" strokeWidth="7" strokeLinecap="round"/><circle cx={x} cy={y} r="10" fill={accent} stroke="#fff" strokeWidth="3"/><text x="705" y={y+4} fontSize="12" fill={ink}>{Math.round(value)}</text></g>;
+        })}
       </g>
 
-      <g transform="translate(950 165)">
-        <rect width="600" height="330" rx="24" fill={soft} />
-        <text x="24" y="40" fontSize="22" fontWeight="800" fill={ink}>③ 減脂阻力風險</text>
+      <g transform="translate(32 890)">
+        <rect width="836" height="290" rx="24" fill="#fff" stroke="#e0dcd4" />
+        <text x="24" y="42" fontSize="23" fontWeight="800" fill={ink}>03 減脂阻力風險</text>
         {riskItems.map(([label,value], i) => {
-          const y = 70 + i * 38;
-          return <g key={label}><text x="24" y={y+14} fontSize="14" fill={ink}>{label}</text><rect x="120" y={y} width="390" height="18" rx="9" fill="#e8e3db"/><rect x="120" y={y} width={Math.max(4, value * 3.9)} height="18" rx="9" fill={ink}/><text x="530" y={y+14} fontSize="14" fontWeight="700" fill={ink}>{Math.round(value)}</text></g>;
+          const y = 67 + i * 34;
+          return <g key={label}><text x="24" y={y+12} fontSize="12" fill={ink}>{label}</text><rect x="125" y={y} width="580" height="16" rx="8" fill="#ece9e3"/><rect x="125" y={y} width={Math.max(4, value * 5.8)} height="16" rx="8" fill={value >= 60 ? "#d77a67" : accent}/><text x="730" y={y+12} fontSize="12" fontWeight="700" fill={ink}>{Math.round(value)}</text></g>;
         })}
-        <text x="24" y="310" fontSize="13" fill={muted}>整體 Risk：{assessment.risk}</text>
+        <text x="24" y="270" fontSize="12" fill={muted}>整體 Risk：{assessment.risk}。分數越高，代表目前越容易形成減脂阻力。</text>
       </g>
 
-      <g transform="translate(50 525)">
-        <rect width="720" height="310" rx="24" fill={soft} />
-        <text x="24" y="40" fontSize="22" fontWeight="800" fill={ink}>④ Behavior Tension 張力圖</text>
-        {tensionPairs.map(([label,a,b], i) => {
-          const y = 92 + i * 64;
-          const x1 = 205 + a * 4.1;
-          const x2 = 205 + b * 4.1;
-          return <g key={label}><text x="24" y={y+5} fontSize="14" fill={ink}>{label}</text><line x1="205" y1={y} x2="615" y2={y} stroke={grid} strokeWidth="4"/><line x1={Math.min(x1,x2)} y1={y} x2={Math.max(x1,x2)} y2={y} stroke={ink} strokeWidth="5"/><circle cx={x1} cy={y} r="8" fill="#fff" stroke={ink} strokeWidth="3"/><circle cx={x2} cy={y} r="8" fill={ink}/><text x="635" y={y+5} fontSize="13" fill={muted}>{a} / {b}</text></g>;
-        })}
-        <text x="24" y="286" fontSize="13" fill={muted}>整體張力：{assessment.behaviorTension}</text>
-      </g>
-
-      <g transform="translate(800 525)">
-        <rect width="750" height="310" rx="24" fill={soft} />
-        <text x="24" y="40" fontSize="22" fontWeight="800" fill={ink}>⑤ 行動優先順序</text>
+      <g transform="translate(32 1200)">
+        <rect width="836" height="330" rx="24" fill="#fff" stroke="#e0dcd4" />
+        <text x="24" y="42" fontSize="23" fontWeight="800" fill={ink}>04 行動優先順序</text>
         {ranked.slice(0,5).map((d, i) => {
           const priority = 100 - d.score;
-          const y = 66 + i * 43;
-          return <g key={d.id}><text x="24" y={y+14} fontSize="14" fontWeight={i===0?800:600} fill={ink}>{i+1}. {d.label}</text><rect x="220" y={y} width="400" height="18" rx="9" fill="#e8e3db"/><rect x="220" y={y} width={Math.max(4, priority*4)} height="18" rx="9" fill={ink}/><text x="640" y={y+14} fontSize="13" fill={ink}>優先度 {priority}</text></g>;
+          const y = 68 + i * 45;
+          return <g key={d.id}><text x="24" y={y+14} fontSize="12" fontWeight={i===0?800:600} fill={ink}>{i+1}. {d.label}</text><rect x="210" y={y} width="480" height="17" rx="8.5" fill="#ece9e3"/><rect x="210" y={y} width={Math.max(5, priority*4.8)} height="17" rx="8.5" fill={accent}/><text x="715" y={y+13} fontSize="12" fill={ink}>優先度 {priority}</text></g>;
         })}
-        <text x="24" y="287" fontSize="13" fill={muted}>最強：{assessment.strongest.label} {assessment.strongest.score}　｜　優先改善：{assessment.weakest.label} {assessment.weakest.score}</text>
+        <text x="24" y="305" fontSize="12" fill={muted}>最強：{assessment.strongest.label} {assessment.strongest.score}　｜　優先改善：{assessment.weakest.label} {assessment.weakest.score}</text>
       </g>
 
-      <text x="1540" y="870" textAnchor="end" fontSize="13" fill={muted}>Human Design × Fat Loss Action Report</text>
+      <text x="450" y="1574" textAnchor="middle" fontSize="11" fill="#8b877f">本報告為自我探索工具，不屬醫療、心理或營養診斷。</text>
     </svg>
   );
 }
