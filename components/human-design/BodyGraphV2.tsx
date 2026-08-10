@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.5";
+export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.6";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -59,17 +59,11 @@ const GATE:Record<number,Point> = {
   1:{x:450,y:352}, 7:{x:423,y:379}, 13:{x:477,y:379},
   10:{x:408,y:394}, 25:{x:492,y:394},
   15:{x:435,y:421}, 46:{x:465,y:421}, 2:{x:450,y:436},
-
   21:{x:534,y:354}, 51:{x:523,y:394}, 26:{x:525,y:412}, 40:{x:560,y:412},
-
-  /* Upper Spleen edge: spread 48 / 57 / 44 evenly instead of crowding the apex. */
   48:{x:309,y:468}, 57:{x:337,y:483}, 44:{x:365,y:497},
   50:{x:374.4,y:518}, 32:{x:337.5,y:537}, 18:{x:298.6,y:557}, 28:{x:259.7,y:577},
-
-  /* Upper Solar edge: keep 37 closest to the apex, then spread 22 / 36 outward. */
   37:{x:528,y:501}, 22:{x:565,y:482}, 36:{x:603,y:462},
   6:{x:525.6,y:518}, 49:{x:562.5,y:537}, 55:{x:601.4,y:557}, 30:{x:640.3,y:577},
-
   5:{x:426,y:492}, 14:{x:450,y:492}, 29:{x:474,y:492},
   34:{x:408,y:510}, 27:{x:408,y:536}, 59:{x:408,y:562},
   3:{x:426,y:580}, 9:{x:450,y:580}, 42:{x:474,y:580},
@@ -107,10 +101,7 @@ function renderCenter(center:CenterId,defined:boolean){
 
 function GateLabel({gate,source}:{gate:number;source:GateSource}){
   const p=GATE[gate]; if(!p)return null;
-  return <g>
-    <circle cx={p.x} cy={p.y} r="6" fill="#fbfaf7"/>
-    <text x={p.x} y={p.y+2.55} textAnchor="middle" fontSize="7.1" fontWeight="900" fill={sourceColor(source)}>{gate}</text>
-  </g>;
+  return <g><circle cx={p.x} cy={p.y} r="6" fill="#fbfaf7"/><text x={p.x} y={p.y+2.55} textAnchor="middle" fontSize="7.1" fontWeight="900" fill={sourceColor(source)}>{gate}</text></g>;
 }
 
 function lerp(a:Point,b:Point,t:number):Point{return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}
@@ -118,46 +109,20 @@ function pointsAttr(points:Point[]){return points.map(p=>`${p.x},${p.y}`).join("
 function midpointIndex(points:Point[]){return Math.max(1,Math.floor(points.length/2));}
 
 function RoutedChannel({points,aSource,bSource,active}:{points:Point[];aSource:GateSource;bSource:GateSource;active:boolean}){
-  const split=midpointIndex(points);
-  const first=points.slice(0,split+1);
-  const second=points.slice(split);
-  if(active){
-    return <g>
-      {aSource!=="inactive"&&<polyline points={pointsAttr(first)} fill="none" stroke={sourceColor(aSource)} strokeWidth="5.4" strokeLinecap="butt" strokeLinejoin="miter"/>}
-      {bSource!=="inactive"&&<polyline points={pointsAttr(second)} fill="none" stroke={sourceColor(bSource)} strokeWidth="5.4" strokeLinecap="butt" strokeLinejoin="miter"/>}
-    </g>;
-  }
-  const aEnd=first.length>1?first.slice(0,2):first;
-  const bEnd=second.length>1?second.slice(-2):second;
-  return <g>
-    {aSource!=="inactive"&&<polyline points={pointsAttr(aEnd)} fill="none" stroke={sourceColor(aSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
-    {bSource!=="inactive"&&<polyline points={pointsAttr(bEnd)} fill="none" stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
-  </g>;
+  const split=midpointIndex(points); const first=points.slice(0,split+1); const second=points.slice(split);
+  if(active){return <g>{aSource!=="inactive"&&<polyline points={pointsAttr(first)} fill="none" stroke={sourceColor(aSource)} strokeWidth="5.4" strokeLinecap="butt" strokeLinejoin="miter"/>}{bSource!=="inactive"&&<polyline points={pointsAttr(second)} fill="none" stroke={sourceColor(bSource)} strokeWidth="5.4" strokeLinecap="butt" strokeLinejoin="miter"/>}</g>;}
+  const aEnd=first.length>1?first.slice(0,2):first; const bEnd=second.length>1?second.slice(-2):second;
+  return <g>{aSource!=="inactive"&&<polyline points={pointsAttr(aEnd)} fill="none" stroke={sourceColor(aSource)} strokeWidth="5.1" strokeLinecap="butt"/>}{bSource!=="inactive"&&<polyline points={pointsAttr(bEnd)} fill="none" stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}</g>;
 }
 
 function ChannelActivation({a,b,aSource,bSource,active}:{a:Point;b:Point;aSource:GateSource;bSource:GateSource;active:boolean}){
-  if(active){
-    const m=lerp(a,b,.5);
-    return <g>
-      {aSource!=="inactive"&&<line x1={a.x} y1={a.y} x2={m.x} y2={m.y} stroke={sourceColor(aSource)} strokeWidth="5.4" strokeLinecap="butt"/>}
-      {bSource!=="inactive"&&<line x1={m.x} y1={m.y} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.4" strokeLinecap="butt"/>}
-    </g>;
-  }
+  if(active){const m=lerp(a,b,.5);return <g>{aSource!=="inactive"&&<line x1={a.x} y1={a.y} x2={m.x} y2={m.y} stroke={sourceColor(aSource)} strokeWidth="5.4" strokeLinecap="butt"/>}{bSource!=="inactive"&&<line x1={m.x} y1={m.y} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.4" strokeLinecap="butt"/>}</g>;}
   const aEnd=lerp(a,b,.24), bStart=lerp(a,b,.76);
-  return <g>
-    {aSource!=="inactive"&&<line x1={a.x} y1={a.y} x2={aEnd.x} y2={aEnd.y} stroke={sourceColor(aSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
-    {bSource!=="inactive"&&<line x1={bStart.x} y1={b.y+(a.y-b.y)*.24} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}
-  </g>;
+  return <g>{aSource!=="inactive"&&<line x1={a.x} y1={a.y} x2={aEnd.x} y2={aEnd.y} stroke={sourceColor(aSource)} strokeWidth="5.1" strokeLinecap="butt"/>}{bSource!=="inactive"&&<line x1={bStart.x} y1={b.y+(a.y-b.y)*.24} x2={b.x} y2={b.y} stroke={sourceColor(bSource)} strokeWidth="5.1" strokeLinecap="butt"/>}</g>;
 }
 
 function ActivationPanel({x,title,color,activations,align}:{x:number;title:string;color:string;activations:HumanDesignActivation[];align:"left"|"right"}){
-  return <g>
-    <text x={x} y="38" textAnchor={align==="left"?"start":"end"} fontSize="15" fontWeight="800" fill={color}>{title}</text>
-    {activations.map((a,i)=>{const y=63+i*23;return <g key={`${title}-${a.body}`}>
-      <text x={x} y={y} textAnchor={align==="left"?"start":"end"} fontSize="13" fontWeight="700" fill={color}>{BODY_SYMBOL[a.body]??"•"}</text>
-      <text x={x+(align==="left"?20:-20)} y={y} textAnchor={align==="left"?"start":"end"} fontSize="12" fontWeight="700" fill="#24232e">{a.gate}.{a.line}</text>
-    </g>;})}
-  </g>;
+  return <g><text x={x} y="38" textAnchor={align==="left"?"start":"end"} fontSize="15" fontWeight="800" fill={color}>{title}</text>{activations.map((a,i)=>{const y=63+i*23;return <g key={`${title}-${a.body}`}><text x={x} y={y} textAnchor={align==="left"?"start":"end"} fontSize="13" fontWeight="700" fill={color}>{BODY_SYMBOL[a.body]??"•"}</text><text x={x+(align==="left"?20:-20)} y={y} textAnchor={align==="left"?"start":"end"} fontSize="12" fontWeight="700" fill="#24232e">{a.gate}.{a.line}</text></g>;})}</g>;
 }
 
 export function BodyGraph({chart,personalityActivations=[],designActivations=[],width=900}:Props){
@@ -166,41 +131,14 @@ export function BodyGraph({chart,personalityActivations=[],designActivations=[],
   const personality=new Set(personalityActivations.map(a=>a.gate));
   const design=new Set(designActivations.map(a=>a.gate));
 
-  return <svg viewBox="0 0 900 760" width="100%" style={{maxWidth:width,height:"auto"}} role="img" aria-label="Human Design BodyGraph">
-    <rect width="900" height="760" rx="22" fill="#fbfaf7"/>
+  return <svg viewBox="0 0 900 740" width="100%" style={{maxWidth:width,height:"auto"}} role="img" aria-label="Human Design BodyGraph">
+    <rect width="900" height="740" rx="22" fill="#fbfaf7"/>
     <ActivationPanel x={34} title="Design" color="#d84238" activations={designActivations} align="left"/>
     <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right"/>
 
-    <g>
-      {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);const route=INTEGRATION_ROUTE[id];return <g key={`rail-${id}`}>
-        {route ? <>
-          <polyline points={pointsAttr(route)} fill="none" stroke="#fbfaf7" strokeWidth="4.8" strokeLinejoin="miter"/>
-          <polyline points={pointsAttr(route)} fill="none" stroke="#807b73" strokeWidth="1.7" opacity="0.9" strokeLinejoin="miter"/>
-        </> : <>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fbfaf7" strokeWidth="4.8"/>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#807b73" strokeWidth="1.7" opacity="0.9"/>
-        </>}
-      </g>;})}
-    </g>
-
-    <g>
-      {CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);const route=INTEGRATION_ROUTE[id];const aSource=gateSource(c.gateA,personality,design),bSource=gateSource(c.gateB,personality,design),active=activeChannels.has(id);return route
-        ? <RoutedChannel key={`act-${id}`} points={route} aSource={aSource} bSource={bSource} active={active}/>
-        : <ChannelActivation key={`act-${id}`} a={a} b={b} aSource={aSource} bSource={bSource} active={active}/>;})}
-    </g>
-
-    <g>
-      {(Object.keys(SHAPES) as CenterId[]).map(center=><g key={center}>
-        {renderCenter(center,defined.has(center))}
-        <text x={CENTER_LABEL[center].x} y={CENTER_LABEL[center].y+4} textAnchor="middle" fontSize="13.4" fontWeight="800" fill="#191820">{center==="Solar Plexus"?"Solar":center}</text>
-      </g>)}
-    </g>
-
-    <g>{Object.keys(GATE).map(g=>{const gate=Number(g);return <GateLabel key={gate} gate={gate} source={gateSource(gate,personality,design)}/>;})}</g>
-
-    <g transform="translate(450 750)">
-      <rect x="-220" y="-18" width="440" height="27" rx="13.5" fill="#fff" stroke="#ddd8cf"/>
-      <text x="0" y="0" textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#5a5650">{chart.type} · {chart.authority} · {chart.profile} · {chart.definition}</text>
-    </g>
+    <g>{CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);const route=INTEGRATION_ROUTE[id];return <g key={`rail-${id}`}>{route ? <><polyline points={pointsAttr(route)} fill="none" stroke="#fbfaf7" strokeWidth="4.8" strokeLinejoin="miter"/><polyline points={pointsAttr(route)} fill="none" stroke="#807b73" strokeWidth="1.7" opacity="0.9" strokeLinejoin="miter"/></> : <><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fbfaf7" strokeWidth="4.8"/><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#807b73" strokeWidth="1.7" opacity="0.9"/></>}</g>;})}</g>
+    <g>{CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);const route=INTEGRATION_ROUTE[id];const aSource=gateSource(c.gateA,personality,design),bSource=gateSource(c.gateB,personality,design),active=activeChannels.has(id);return route ? <RoutedChannel key={`act-${id}`} points={route} aSource={aSource} bSource={bSource} active={active}/> : <ChannelActivation key={`act-${id}`} a={a} b={b} aSource={aSource} bSource={bSource} active={active}/>;})}</g>
+    <g>{(Object.keys(SHAPES) as CenterId[]).map(center=><g key={center}>{renderCenter(center,defined.has(center))}<text x={CENTER_LABEL[center].x} y={CENTER_LABEL[center].y} textAnchor="middle" dominantBaseline="middle" fontSize="13" fontWeight="800" fill="#171720">{center==="Solar Plexus"?"Solar":center}</text></g>)}</g>
+    <g>{Array.from({length:64},(_,i)=>i+1).map(g=><GateLabel key={g} gate={g} source={gateSource(g,personality,design)}/>)}</g>
   </svg>;
 }
