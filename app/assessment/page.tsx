@@ -78,15 +78,25 @@ function queryWith(params: Record<string, string | string[] | undefined>, change
   return `/assessment?${query.toString()}`;
 }
 
+function taipeiDateStamp() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date()).replace(/-/g, "");
+}
+
 function makeAssessmentId(name: string, birthDate: string, answers: Record<string, number>) {
-  const raw = `${name}|${birthDate}|${BEHAVIOR_QUESTIONS.map(q => answers[q.id] ?? 0).join("")}`;
+  const dateStamp = taipeiDateStamp();
+  const raw = `${dateStamp}|${name}|${birthDate}|${BEHAVIOR_QUESTIONS.map(q => answers[q.id] ?? 0).join("")}`;
   let hash = 2166136261;
   for (let i = 0; i < raw.length; i += 1) {
     hash ^= raw.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
   const suffix = (hash >>> 0).toString(36).toUpperCase().padStart(7, "0").slice(-7);
-  return `HD-${birthDate.replace(/-/g, "").slice(2)}-${suffix}`;
+  return `HD-${dateStamp}-${suffix}`;
 }
 
 export default async function AssessmentPage({ searchParams }: { searchParams: SearchParams }) {
