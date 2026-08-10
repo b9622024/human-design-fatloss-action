@@ -3,7 +3,7 @@
 import type { HumanDesignActivation } from "@/lib/human-design/activations";
 import { CHANNELS, type CenterId, type CoreHumanDesignChart } from "@/lib/human-design/topology";
 
-export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.6";
+export const BODYGRAPH_RENDERER_VERSION = "CANONICAL-SLOTS-1.7";
 
 type Props = {
   chart: CoreHumanDesignChart;
@@ -17,7 +17,17 @@ type GateSource = "personality"|"design"|"both"|"inactive";
 
 const BODY_SYMBOL:Record<string,string> = {Sun:"☉",Earth:"⊕",Moon:"☽",NorthNode:"☊",SouthNode:"☋",Mercury:"☿",Venus:"♀",Mars:"♂",Jupiter:"♃",Saturn:"♄",Uranus:"♅",Neptune:"♆",Pluto:"♇"};
 const CENTER_FILL:Record<CenterId,string> = {Head:"#f2df67",Ajna:"#8cb7a5",Throat:"#b38f63",G:"#f0df67",Ego:"#ffffff",Spleen:"#ffffff","Solar Plexus":"#ffffff",Sacral:"#cd6861",Root:"#b98561"};
-const CENTER_NAME:Record<CenterId,string> = {Head:"頭部中心",Ajna:"阿賈那中心",Throat:"喉嚨中心",G:"G中心",Ego:"意志力中心",Spleen:"脾臟中心","Solar Plexus":"情緒中心",Sacral:"薦骨中心",Root:"根部中心"};
+const CENTER_NAME:Record<CenterId,string[]> = {
+  Head:["頭部中心"],
+  Ajna:["阿賈那","中心"],
+  Throat:["喉嚨中心"],
+  G:["G中心"],
+  Ego:["意志力","中心"],
+  Spleen:["脾臟中心"],
+  "Solar Plexus":["情緒中心"],
+  Sacral:["薦骨中心"],
+  Root:["根部中心"],
+};
 const SHAPES:Record<CenterId,Shape> = {
   Head:{kind:"polygon",points:[{x:450,y:42},{x:408,y:112},{x:492,y:112}]},
   Ajna:{kind:"polygon",points:[{x:408,y:138},{x:492,y:138},{x:450,y:208}]},
@@ -29,7 +39,7 @@ const SHAPES:Record<CenterId,Shape> = {
   Sacral:{kind:"rect",x:408,y:492,width:84,height:88,rx:4},
   Root:{kind:"rect",x:397,y:646,width:106,height:88,rx:4},
 };
-const CENTER_LABEL:Record<CenterId,Point> = {Head:{x:450,y:80},Ajna:{x:450,y:174},Throat:{x:450,y:286},G:{x:450,y:399},Ego:{x:542,y:392},Spleen:{x:306,y:517},"Solar Plexus":{x:594,y:517},Sacral:{x:450,y:540},Root:{x:450,y:697}};
+const CENTER_LABEL:Record<CenterId,Point> = {Head:{x:450,y:80},Ajna:{x:450,y:171},Throat:{x:450,y:286},G:{x:450,y:399},Ego:{x:543,y:390},Spleen:{x:306,y:517},"Solar Plexus":{x:594,y:517},Sacral:{x:450,y:540},Root:{x:450,y:697}};
 const GATE:Record<number,Point> = {
   64:{x:424,y:112},61:{x:450,y:112},63:{x:476,y:112},47:{x:424,y:138},24:{x:450,y:138},4:{x:476,y:138},17:{x:417,y:153},11:{x:483,y:153},43:{x:450,y:208},
   62:{x:425,y:244},23:{x:450,y:244},56:{x:475,y:244},16:{x:407,y:262},20:{x:407,y:303},35:{x:493,y:262},12:{x:493,y:282},45:{x:493,y:303},31:{x:425,y:326},8:{x:450,y:326},33:{x:475,y:326},
@@ -51,6 +61,7 @@ const INTEGRATION_ROUTE:Record<string,Point[]> = {
 function gateSource(gate:number,personality:Set<number>,design:Set<number>):GateSource{const p=personality.has(gate),d=design.has(gate);if(p&&d)return"both";if(p)return"personality";if(d)return"design";return"inactive";}
 function sourceColor(source:GateSource){return source==="design"?"#d84a40":source==="both"?"#9c3d39":source==="personality"?"#171720":"#6b6761";}
 function renderCenter(center:CenterId,defined:boolean){const s=SHAPES[center];const common={fill:defined?CENTER_FILL[center]:"#fff",stroke:"#171720",strokeWidth:2.8};if(s.kind==="rect")return <rect x={s.x} y={s.y} width={s.width} height={s.height} rx={s.rx} {...common}/>;return <polygon points={s.points.map(p=>`${p.x},${p.y}`).join(" ")} {...common}/>;}
+function CenterLabel({center}:{center:CenterId}){const label=CENTER_NAME[center];const p=CENTER_LABEL[center];const fontSize=center==="Solar Plexus"?9.5:center==="Ego"||center==="Ajna"?8.7:center==="Throat"?10.5:11;const lineHeight=10.5;const startY=p.y-((label.length-1)*lineHeight)/2;return <text x={p.x} y={startY} textAnchor="middle" dominantBaseline="middle" fontSize={fontSize} fontWeight="800" fill="#171720">{label.map((line,i)=><tspan key={line} x={p.x} dy={i===0?0:lineHeight}>{line}</tspan>)}</text>;}
 function GateLabel({gate,source}:{gate:number;source:GateSource}){const p=GATE[gate];if(!p)return null;return <g><circle cx={p.x} cy={p.y} r="6" fill="#fbfaf7"/><text x={p.x} y={p.y+2.55} textAnchor="middle" fontSize="7.1" fontWeight="900" fill={sourceColor(source)}>{gate}</text></g>;}
 function lerp(a:Point,b:Point,t:number):Point{return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}
 function pointsAttr(points:Point[]){return points.map(p=>`${p.x},${p.y}`).join(" ");}
@@ -66,7 +77,7 @@ export function BodyGraph({chart,personalityActivations=[],designActivations=[],
     <ActivationPanel x={866} title="Personality" color="#191820" activations={personalityActivations} align="right"/>
     <g>{CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);const route=INTEGRATION_ROUTE[id];return <g key={`rail-${id}`}>{route?<><polyline points={pointsAttr(route)} fill="none" stroke="#fbfaf7" strokeWidth="4.8" strokeLinejoin="miter"/><polyline points={pointsAttr(route)} fill="none" stroke="#807b73" strokeWidth="1.7" opacity="0.9" strokeLinejoin="miter"/></>:<><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#fbfaf7" strokeWidth="4.8"/><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#807b73" strokeWidth="1.7" opacity="0.9"/></>}</g>;})}</g>
     <g>{CHANNELS.map(c=>{const a=GATE[c.gateA],b=GATE[c.gateB];if(!a||!b)return null;const id=canonical(c.gateA,c.gateB);const route=INTEGRATION_ROUTE[id];const aSource=gateSource(c.gateA,personality,design),bSource=gateSource(c.gateB,personality,design),active=activeChannels.has(id);return route?<RoutedChannel key={`act-${id}`} points={route} aSource={aSource} bSource={bSource} active={active}/>:<ChannelActivation key={`act-${id}`} a={a} b={b} aSource={aSource} bSource={bSource} active={active}/>;})}</g>
-    <g>{(Object.keys(SHAPES) as CenterId[]).map(center=><g key={center}>{renderCenter(center,defined.has(center))}<text x={CENTER_LABEL[center].x} y={CENTER_LABEL[center].y} textAnchor="middle" dominantBaseline="middle" fontSize={center==="Solar Plexus"?9.5:center==="Throat"?10.5:11} fontWeight="800" fill="#171720">{CENTER_NAME[center]}</text></g>)}</g>
+    <g>{(Object.keys(SHAPES) as CenterId[]).map(center=><g key={center}>{renderCenter(center,defined.has(center))}<CenterLabel center={center}/></g>)}</g>
     <g>{Array.from({length:64},(_,i)=>i+1).map(g=><GateLabel key={g} gate={g} source={gateSource(g,personality,design)}/>)}</g>
   </svg>;
 }
