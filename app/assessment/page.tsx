@@ -1,5 +1,6 @@
 import { BodyGraph, BODYGRAPH_RENDERER_VERSION } from "@/components/human-design/BodyGraphV2";
 import { ReportActions } from "@/components/assessment/ReportActions";
+import { BehaviorCharts } from "@/components/assessment/BehaviorCharts";
 import { normalizeBirthTime } from "@/lib/human-design/time";
 import { solveDesignMoment } from "@/lib/human-design/design-moment";
 import { buildHumanDesignActivations } from "@/lib/human-design/activations";
@@ -221,7 +222,7 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
 
       {step === "3" && assessment && (
         <>
-          <div id="assessment-report" style={{ display: "grid", gap: 18, marginTop: 18 }}>
+          <div style={{ display: "grid", gap: 18, marginTop: 18 }}>
             <section style={cardStyle}>
               <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: ".05em", opacity: 0.62 }}>HUMAN DESIGN × BEHAVIOR</div>
               <h2 style={{ margin: "10px 0 8px", color: "#17172d" }}>綜合結果</h2>
@@ -229,20 +230,9 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
             </section>
 
             <section style={cardStyle}>
-              <h2 style={{ marginTop: 0, color: "#17172d" }}>六大行為維度</h2>
-              <div style={{ display: "grid", gap: 14 }}>
-                {assessment.dimensions.map(item => (
-                  <div key={item.id}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontWeight: 700 }}><span>{item.label}</span><span>{item.score}</span></div>
-                    <div style={{ height: 12, borderRadius: 999, background: "#ece7de", overflow: "hidden" }}><div style={{ width: `${item.score}%`, height: "100%", borderRadius: 999, background: "#17172d" }} /></div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 12, marginTop: 20 }}>
-                <div style={{ padding: 16, borderRadius: 16, background: "#f5f1e8" }}><div style={{ fontSize: 13, color: "#706c67" }}>Risk</div><strong style={{ fontSize: 28 }}>{assessment.risk}</strong></div>
-                <div style={{ padding: 16, borderRadius: 16, background: "#f5f1e8" }}><div style={{ fontSize: 13, color: "#706c67" }}>Behavior Tension</div><strong style={{ fontSize: 28 }}>{assessment.behaviorTension}</strong></div>
-              </div>
-              <p style={{ marginBottom: 0, color: "#706c67", lineHeight: 1.65 }}>目前最強：{assessment.strongest.label}（{assessment.strongest.score}）；優先改善：{assessment.weakest.label}（{assessment.weakest.score}）。</p>
+              <h2 style={{ marginTop: 0, color: "#17172d" }}>五張行為分析圖</h2>
+              <p style={{ margin: "0 0 18px", color: "#706c67", lineHeight: 1.65 }}>包含六大行為輪廓、執行模式四象限、減脂阻力風險、Behavior Tension 與行動優先順序。</p>
+              <div style={{ overflowX: "auto" }}><BehaviorCharts assessment={assessment} /></div>
             </section>
 
             {unknownTime ? (
@@ -254,15 +244,15 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
                 <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.62 }}>BODYGRAPH {BODYGRAPH_RENDERER_VERSION}</div>
                 <h2 style={{ margin: "10px 0 6px", color: "#17172d" }}>你的人類圖</h2>
                 <p style={{ margin: 0, color: "#706c67" }}>{chart.type} · {chart.authority} · {chart.profile} · {chart.definition}</p>
-                <div style={{ display: "flex", justifyContent: "center", overflowX: "auto", marginTop: 18 }}><BodyGraph chart={chart} personalityActivations={personalityActivations} designActivations={designActivations} width={900} /></div>
+                <div id="human-design-svg-source" style={{ display: "flex", justifyContent: "center", overflowX: "auto", marginTop: 18 }}><BodyGraph chart={chart} personalityActivations={personalityActivations} designActivations={designActivations} width={900} /></div>
               </section>
             ) : null}
           </div>
 
           <section style={{ ...cardStyle, marginTop: 18 }}>
             <h2 style={{ marginTop: 0, color: "#17172d" }}>匯出報告</h2>
-            <p style={{ color: "#706c67", lineHeight: 1.6 }}>目前先保留 JSON 與舊版 PNG 按鈕。下一階段會依定稿規格拆成「人類圖 PNG」、「行為分析 PNG」與 2 頁 PDF。</p>
-            <ReportActions reportJson={reportJson} reportElementId="assessment-report" />
+            <p style={{ color: "#706c67", lineHeight: 1.6 }}>PNG 已改成直接輸出純 SVG 圖表，不再截整個網頁。這種方式對手機 Safari 會穩定很多。</p>
+            <ReportActions reportJson={reportJson} humanDesignElementId={chart ? "human-design-svg-source" : undefined} behaviorSvgId="behavior-report-svg" />
             <details style={{ marginTop: 14 }}>
               <summary style={{ cursor: "pointer", fontWeight: 700 }}>查看完整 JSON</summary>
               <textarea readOnly value={reportJson} style={{ ...inputStyle, minHeight: 260, marginTop: 10, fontFamily: "monospace", fontSize: 12 }} />
