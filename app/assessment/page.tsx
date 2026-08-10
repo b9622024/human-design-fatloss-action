@@ -78,6 +78,7 @@ function queryWith(params: Record<string, string | string[] | undefined>, change
 export default async function AssessmentPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const step = getParam(params, "step", "1");
+  const name = getParam(params, "name");
   const birthDate = getParam(params, "birthDate");
   const birthTime = getParam(params, "birthTime");
   const birthCity = getParam(params, "birthCity", "台北市");
@@ -107,8 +108,9 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
   }
 
   const reportPayload = step === "3" ? {
-    schemaVersion: "human-design-fatloss-report-v2",
+    schemaVersion: "human-design-fatloss-report-v3",
     generatedAt: new Date().toISOString(),
+    profile: { name },
     birth: {
       date: birthDate,
       time: unknownTime ? null : birthTime,
@@ -131,6 +133,7 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
   } : null;
 
   const reportJson = reportPayload ? JSON.stringify(reportPayload, null, 2) : "";
+  const humanSummary = chart ? `${chart.type} · ${chart.authority} · ${chart.profile} · ${chart.definition}` : "";
 
   return (
     <main style={shellStyle}>
@@ -139,7 +142,7 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
           人類圖減脂行動測驗 · STEP {step === "3" ? "03" : step === "2" ? "02" : "01"}
         </div>
         <h1 style={{ fontSize: "clamp(34px,7vw,58px)", lineHeight: 1.04, margin: "18px 0 16px", color: "#17172d" }}>
-          {step === "3" ? "你的綜合結果" : step === "2" ? "18 題行為測驗" : "先填出生資料"}
+          {step === "3" ? "你的綜合結果" : step === "2" ? "18 題行為測驗" : "先填基本資料"}
         </h1>
         <p style={{ margin: 0, fontSize: "clamp(17px,3.8vw,21px)", lineHeight: 1.65, color: "#706c67" }}>
           {step === "3"
@@ -155,6 +158,10 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
           <form method="GET" style={{ display: "grid", gap: 16 }}>
             <input type="hidden" name="step" value="2" />
             <input type="hidden" name="q" value="1" />
+            <label style={{ display: "grid", gap: 8 }}>
+              <strong style={{ fontSize: 17 }}>姓名</strong>
+              <input type="text" name="name" required defaultValue={name} placeholder="請輸入姓名或暱稱" style={inputStyle} />
+            </label>
             <label style={{ display: "grid", gap: 8 }}>
               <strong style={{ fontSize: 17 }}>出生日期</strong>
               <input type="date" name="birthDate" required defaultValue={birthDate} style={inputStyle} />
@@ -226,13 +233,13 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
             <section style={cardStyle}>
               <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: ".05em", opacity: 0.62 }}>HUMAN DESIGN × BEHAVIOR</div>
               <h2 style={{ margin: "10px 0 8px", color: "#17172d" }}>綜合結果</h2>
-              <p style={{ margin: 0, color: "#706c67", lineHeight: 1.65 }}>出生地：{birthCity}。行為測驗為教練工具，不是醫療或心理診斷。</p>
+              <p style={{ margin: 0, color: "#706c67", lineHeight: 1.65 }}>{name} · {birthDate} · {unknownTime ? "時間未知" : birthTime} · {birthCity}</p>
             </section>
 
             <section style={cardStyle}>
-              <h2 style={{ marginTop: 0, color: "#17172d" }}>五張行為分析圖</h2>
-              <p style={{ margin: "0 0 18px", color: "#706c67", lineHeight: 1.65 }}>包含六大行為輪廓、執行模式四象限、減脂阻力風險、Behavior Tension 與行動優先順序。</p>
-              <div style={{ overflowX: "auto" }}><BehaviorCharts assessment={assessment} /></div>
+              <h2 style={{ marginTop: 0, color: "#17172d" }}>行為分析圖</h2>
+              <p style={{ margin: "0 0 18px", color: "#706c67", lineHeight: 1.65 }}>包含六大行為輪廓、執行偏好、減脂阻力風險與行動優先順序。</p>
+              <div style={{ overflowX: "auto" }}><BehaviorCharts assessment={assessment} name={name} birthDate={birthDate} birthTime={unknownTime ? null : birthTime} birthCity={birthCity} /></div>
             </section>
 
             {unknownTime ? (
@@ -243,7 +250,7 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
               <section style={cardStyle}>
                 <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.62 }}>BODYGRAPH {BODYGRAPH_RENDERER_VERSION}</div>
                 <h2 style={{ margin: "10px 0 6px", color: "#17172d" }}>你的人類圖</h2>
-                <p style={{ margin: 0, color: "#706c67" }}>{chart.type} · {chart.authority} · {chart.profile} · {chart.definition}</p>
+                <p style={{ margin: 0, color: "#706c67" }}>{humanSummary}</p>
                 <div id="human-design-svg-source" style={{ display: "flex", justifyContent: "center", overflowX: "auto", marginTop: 18 }}><BodyGraph chart={chart} personalityActivations={personalityActivations} designActivations={designActivations} width={900} /></div>
               </section>
             ) : null}
@@ -251,8 +258,8 @@ export default async function AssessmentPage({ searchParams }: { searchParams: S
 
           <section style={{ ...cardStyle, marginTop: 18 }}>
             <h2 style={{ marginTop: 0, color: "#17172d" }}>匯出報告</h2>
-            <p style={{ color: "#706c67", lineHeight: 1.6 }}>PNG 已改成直接輸出純 SVG 圖表，不再截整個網頁。這種方式對手機 Safari 會穩定很多。</p>
-            <ReportActions reportJson={reportJson} humanDesignElementId={chart ? "human-design-svg-source" : undefined} behaviorSvgId="behavior-report-svg" />
+            <p style={{ color: "#706c67", lineHeight: 1.6 }}>兩張 PNG 統一為 9:16 直式報告版型，並加入姓名、出生日期、時間與出生地。</p>
+            <ReportActions reportJson={reportJson} humanDesignElementId={chart ? "human-design-svg-source" : undefined} behaviorSvgId="behavior-report-svg" name={name} birthDate={birthDate} birthTime={unknownTime ? null : birthTime} birthCity={birthCity} humanSummary={humanSummary} />
             <details style={{ marginTop: 14 }}>
               <summary style={{ cursor: "pointer", fontWeight: 700 }}>查看完整 JSON</summary>
               <textarea readOnly value={reportJson} style={{ ...inputStyle, minHeight: 260, marginTop: 10, fontFamily: "monospace", fontSize: 12 }} />
