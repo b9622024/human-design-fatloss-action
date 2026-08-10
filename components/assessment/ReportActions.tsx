@@ -4,7 +4,8 @@ import { useState } from "react";
 
 type Props = {
   reportJson: string;
-  reportElementId: string;
+  humanDesignElementId?: string;
+  behaviorSvgId: string;
 };
 
 function triggerDownload(blob: Blob, filename: string) {
@@ -12,15 +13,64 @@ function triggerDownload(blob: Blob, filename: string) {
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
+  link.rel = "noopener";
   document.body.appendChild(link);
   link.click();
   link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
-export function ReportActions({ reportJson, reportElementId }: Props) {
+async function svgElementToPng(svg: SVGSVGElement, filename: string, scale = 2) {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const viewBox = clone.viewBox.baseVal;
+  const width = viewBox?.width || Number(clone.getAttribute("width")) || 1200;
+  const height = viewBox?.height || Number(clone.getAttribute("height")) || 1600;
+  clone.setAttribute("width", String(width));
+  clone.setAttribute("height", String(height));
+
+  const serialized = new XMLSerializer().serializeToString(clone);
+  const svgBlob = new Blob([serialized], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = new Image();
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("SVG 轉換圖片失敗"));
+      image.src = svgUrl;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(width * scale);
+    canvas.height = Math.ceil(height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("瀏覽器不支援 Canvas");
+    ctx.scale(scale, scale);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const pngBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(result => result ? resolve(result) : reject(new Error("PNG 產生失敗")), "image/png", 1);
+    });
+
+    triggerDownload(pngBlob, filename);
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+}
+
+function findSvg(elementId: string) {
+  const node = document.getElementById(elementId);
+  if (!node) return null;
+  if (node instanceof SVGSVGElement) return node;
+  return node.querySelector("svg");
+}
+
+export function ReportActions({ reportJson, humanDesignElementId, behaviorSvgId }: Props) {
   const [copied, setCopied] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function copyJson() {
@@ -33,75 +83,22 @@ export function ReportActions({ reportJson, reportElementId }: Props) {
     }
   }
 
-  function downloadJson() {
+  async function downloadSvgPng(elementId: string, filename: string, mode: string) {
+    setBusy(mode);
     setError(null);
     try {
-      triggerDownload(
-        new Blob([reportJson], { type: "application/json;charset=utf-8" }),
-        `human-design-fatloss-report-${new Date().toISOString().slice(0, 10)}.json`,
-      );
-    } catch {
-      setError("JSON 檔案下載失敗，仍可使用一鍵複製 JSON。");
-    }
-  }
-
-  async function downloadPng() {
-    setDownloading(true);
-    setError(null);
-    try {
-      const source = document.getElementById(reportElementId);
-      if (!source) throw new Error("找不到報告內容");
-
-      const clone = source.cloneNode(true) as HTMLElement;
-      clone.style.width = "900px";
-      clone.style.maxWidth = "900px";
-      clone.style.margin = "0";
-      clone.style.background = "#f5f1e8";
-
-      const wrapper = document.createElement("div");
-      wrapper.style.position = "fixed";
-      wrapper.style.left = "-10000px";
-      wrapper.style.top = "0";
-      wrapper.style.width = "900px";
-      wrapper.appendChild(clone);
-      document.body.appendChild(wrapper);
-
-      const height = Math.max(clone.scrollHeight, clone.getBoundingClientRect().height);
-      const serialized = new XMLSerializer().serializeToString(clone);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:900px;background:#f5f1e8">${serialized}</div></foreignObject></svg>`;
-      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-
-      const image = new Image();
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error("報告轉圖失敗"));
-        image.src = url;
-      });
-
-      const scale = 2;
-      const canvas = document.createElement("canvas");
-      canvas.width = 900 * scale;
-      canvas.height = Math.ceil(height * scale);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("瀏覽器不支援 Canvas");
-      ctx.scale(scale, scale);
-      ctx.fillStyle = "#f5f1e8";
-      ctx.fillRect(0, 0, 900, height);
-      ctx.drawImage(image, 0, 0, 900, height);
-
-      const pngBlob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((result) => result ? resolve(result) : reject(new Error("PNG 產生失敗")), "image/png", 1);
-      });
-      triggerDownload(pngBlob, `human-design-fatloss-report-${new Date().toISOString().slice(0, 10)}.png`);
-
-      URL.revokeObjectURL(url);
-      wrapper.remove();
+      const svg = findSvg(elementId);
+      if (!svg) throw new Error("找不到可輸出的 SVG 圖表");
+      await svgElementToPng(svg, filename, 2);
     } catch (err) {
       setError(err instanceof Error ? err.message : "PNG 下載失敗");
     } finally {
-      setDownloading(false);
+      setBusy(null);
     }
+  }
+
+  function downloadJson() {
+    triggerDownload(new Blob([reportJson], { type: "application/json;charset=utf-8" }), `human-design-fatloss-report-${new Date().toISOString().slice(0, 10)}.json`);
   }
 
   const secondaryButton = {
@@ -114,17 +111,20 @@ export function ReportActions({ reportJson, reportElementId }: Props) {
     fontSize: 15,
   } as const;
 
+  const date = new Date().toISOString().slice(0, 10);
+
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <button type="button" onClick={() => void downloadPng()} disabled={downloading} style={{ padding: 15, borderRadius: 999, border: 0, background: "#17172d", color: "#fff", fontWeight: 800, fontSize: 15 }}>
-        {downloading ? "正在產生 PNG…" : "下載 PNG 完整報告"}
+      {humanDesignElementId && (
+        <button type="button" disabled={Boolean(busy)} onClick={() => void downloadSvgPng(humanDesignElementId, `human-design-${date}.png`, "human")} style={{ padding: 15, borderRadius: 999, border: 0, background: "#17172d", color: "#fff", fontWeight: 800, fontSize: 15 }}>
+          {busy === "human" ? "正在產生人類圖 PNG…" : "下載人類圖 PNG"}
+        </button>
+      )}
+      <button type="button" disabled={Boolean(busy)} onClick={() => void downloadSvgPng(behaviorSvgId, `behavior-analysis-${date}.png`, "behavior")} style={{ padding: 15, borderRadius: 999, border: 0, background: "#17172d", color: "#fff", fontWeight: 800, fontSize: 15 }}>
+        {busy === "behavior" ? "正在產生分析 PNG…" : "下載行為分析 PNG（5 張圖）"}
       </button>
-      <button type="button" onClick={downloadJson} style={secondaryButton}>
-        下載 JSON 完整資料
-      </button>
-      <button type="button" onClick={() => void copyJson()} style={secondaryButton}>
-        {copied ? "JSON 已複製" : "一鍵複製 JSON"}
-      </button>
+      <button type="button" onClick={downloadJson} style={secondaryButton}>下載 JSON 完整資料</button>
+      <button type="button" onClick={() => void copyJson()} style={secondaryButton}>{copied ? "JSON 已複製" : "一鍵複製 JSON"}</button>
       {error && <div style={{ padding: 12, borderRadius: 12, background: "#fff0ee", color: "#9f2e25", lineHeight: 1.55 }}>{error}</div>}
     </div>
   );
